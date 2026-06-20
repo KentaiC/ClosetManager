@@ -1,0 +1,15 @@
+# macOS
+.DS_Store
+
+# Xcode 用户级状态（不应入库）
+xcuserdata/
+*.xcuserstate
+
+# 构建产物
+DerivedData/
+build/
+*.moved-aside
+
+# Swift Package Manager
+.build/
+.swiftpm/
