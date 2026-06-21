@@ -14,6 +14,11 @@ final class WearRecord {
     /// 穿着日期（按天记录）。
     var date: Date
 
+    /// 是否为「目前正在穿」的当前活动穿搭。
+    /// 同一时刻至多一条为 true；用户「脱下」后置为 false，记录转为日历历史。
+    /// 提供默认值以便 SwiftData 轻量迁移。
+    var isActive: Bool = false
+
     /// 关联的穿搭（可空：也允许只记录零散单品，而非完整 Outfit）。
     /// 反向关系声明在 `Outfit.wearRecords`。
     var outfit: Outfit?
@@ -28,6 +33,7 @@ final class WearRecord {
     init(
         id: UUID = UUID(),
         date: Date = .now,
+        isActive: Bool = false,
         outfit: Outfit? = nil,
         items: [ClothingItem] = [],
         notes: String? = nil,
@@ -35,6 +41,7 @@ final class WearRecord {
     ) {
         self.id = id
         self.date = date
+        self.isActive = isActive
         self.outfit = outfit
         self.items = items
         self.notes = notes

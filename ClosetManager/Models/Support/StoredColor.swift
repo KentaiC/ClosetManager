@@ -6,10 +6,7 @@ import SwiftUI
 /// - SwiftData 会将其作为「复合属性 (Composite Attribute)」整体存储到单品记录中。
 /// - 采用 sRGB 颜色空间、0...1 范围的分量，跨 iOS / macOS 通用（避免直接依赖 UIColor / NSColor）。
 /// - 由 CoreImage 取色后写入；UI 层通过 `color` 计算属性还原为 SwiftUI Color。
-///
-/// 标记 `nonisolated`：本类型是纯数据值，需被 SwiftData 的非隔离存取代码使用，
-/// 不应被工程的「Default Actor Isolation = MainActor」隐式绑定到主线程。
-nonisolated struct StoredColor: Codable, Hashable {
+struct StoredColor: Codable, Hashable {
     var red: Double
     var green: Double
     var blue: Double

@@ -87,6 +87,9 @@ extension Outfit {
     /// 配饰（可选，可多件）。
     var accessories: [ClothingItem] { items.filter { $0.category == .accessory } }
 
+    /// 袜子（可选）。
+    var socks: ClothingItem? { items.first { $0.category == .socks } }
+
     /// 缺失的必选槽位（上装 / 下装 / 鞋子）。
     var missingRequiredSlots: [Category] {
         Category.allCases.filter { category in

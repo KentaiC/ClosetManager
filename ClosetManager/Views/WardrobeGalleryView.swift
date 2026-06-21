@@ -26,14 +26,18 @@ struct WardrobeGalleryView: View {
 
     var body: some View {
         NavigationStack {
-            Group {
+            ScrollView {
+                // 常驻「目前正在穿」看板。
+                ActiveOutfitWidget()
+                    .padding(.horizontal)
+                    .padding(.top, 8)
+
                 if items.isEmpty {
                     emptyState
+                        .padding(.top, 40)
                 } else {
-                    ScrollView {
-                        categoryBar
-                        gridContent
-                    }
+                    categoryBar
+                    gridContent
                 }
             }
             .navigationTitle("我的衣橱")

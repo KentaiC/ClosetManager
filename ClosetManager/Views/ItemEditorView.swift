@@ -5,8 +5,10 @@ import PhotosUI
 /// 添加 / 编辑单品表单。
 ///
 /// - `editingItem == nil` 时为「新增」模式；非 nil 时为「编辑」模式。
-/// - 顶部 `PhotosPicker` 选图后，调用 `VisionService` 本地抠图并实时预览去背结果。
-/// - 表单区用原生 `Form` 承载各项枚举属性（分类 / 场景 / 保暖 / 季节 / 状态）。
+/// - 顶部 `PhotosPicker` 选图后，调用 `VisionService` 本地抠图 + CoreImage 取色，实时预览。
+/// - 名称默认按「颜色 + 子类」自动生成（如「绿色短裤」）；只要用户没手动填名称，
+///   它会随分类 / 子类 / 取色结果实时更新；用户一旦输入即视为自定义，清空后恢复自动。
+/// - 鞋子 / 配饰默认不进洗衣袋（状态锁定在衣橱）。
 ///
 /// 权限说明：`PhotosPicker` 基于系统 PHPicker，在独立进程中运行，
 /// **用户仅选取单张图片不会触发相册权限弹窗，也无需在 Info.plist 配置
@@ -20,8 +22,13 @@ struct ItemEditorView: View {
 
     // MARK: - 表单状态
 
-    @State private var name: String
+    /// 用户手动输入的名称（仅当 `nameManuallyEdited == true` 时生效）。
+    @State private var customName: String
+    /// 名称是否已被用户手动编辑（false 时使用自动生成的 `defaultName`）。
+    @State private var nameManuallyEdited: Bool
+
     @State private var category: Category
+    @State private var subtype: Subtype?
     @State private var selectedScenarios: Set<Scenario>
     @State private var selectedWarmthLevels: Set<WarmthLevel>
     @State private var selectedSeasons: Set<Season>
@@ -29,10 +36,12 @@ struct ItemEditorView: View {
     @State private var brand: String
     @State private var notes: String
 
-    // MARK: - 图像状态
+    // MARK: - 图像 / 颜色状态
 
     @State private var originalImageData: Data?
     @State private var processedImageData: Data?
+    @State private var dominantColor: StoredColor
+    @State private var secondaryColor: StoredColor?
     @State private var pickerItem: PhotosPickerItem?
     @State private var processingState: ProcessingState = .idle
 
@@ -49,8 +58,10 @@ struct ItemEditorView: View {
 
     init(editingItem: ClothingItem? = nil) {
         self.editingItem = editingItem
-        _name = State(initialValue: editingItem?.name ?? "")
+        _customName = State(initialValue: editingItem?.name ?? "")
+        _nameManuallyEdited = State(initialValue: !(editingItem?.name.isEmpty ?? true))
         _category = State(initialValue: editingItem?.category ?? .top)
+        _subtype = State(initialValue: editingItem?.subtype)
         _selectedScenarios = State(initialValue: Set(editingItem?.scenarios ?? []))
         _selectedWarmthLevels = State(initialValue: Set(editingItem?.warmthLevels ?? []))
         _selectedSeasons = State(initialValue: Set(editingItem?.seasons ?? []))
@@ -59,6 +70,8 @@ struct ItemEditorView: View {
         _notes = State(initialValue: editingItem?.notes ?? "")
         _originalImageData = State(initialValue: editingItem?.originalImageData)
         _processedImageData = State(initialValue: editingItem?.processedImageData)
+        _dominantColor = State(initialValue: editingItem?.dominantColor ?? StoredColor(red: 0.5, green: 0.5, blue: 0.5))
+        _secondaryColor = State(initialValue: editingItem?.secondaryColor)
         // 已有季节数据视为「手动」，避免编辑时被保暖标签自动覆盖。
         _seasonsManuallyEdited = State(initialValue: !(editingItem?.seasons.isEmpty ?? true))
     }
@@ -68,6 +81,7 @@ struct ItemEditorView: View {
             Form {
                 imageSection
                 basicInfoSection
+                colorSection
                 scenarioSection
                 warmthSection
                 seasonSection
@@ -94,7 +108,36 @@ struct ItemEditorView: View {
             .onChange(of: selectedWarmthLevels) { _, _ in
                 deriveSeasonsIfNeeded()
             }
+            .onChange(of: category) { _, newCategory in
+                // 切换分类后：子类不匹配则清空。
+                if let current = subtype, current.category != newCategory {
+                    subtype = nil
+                }
+            }
         }
+    }
+
+    // MARK: - 名称（自动 / 手动）
+
+    /// 自动生成的默认名称：颜色 + 子类（如「绿色短裤」）。
+    private var defaultName: String {
+        ClothingItem.defaultName(color: dominantColor, subtype: subtype, category: category)
+    }
+
+    /// 名称输入框绑定：未手动编辑时显示并随状态实时更新默认名；输入即转自定义；清空则恢复自动。
+    private var nameBinding: Binding<String> {
+        Binding(
+            get: { nameManuallyEdited ? customName : defaultName },
+            set: { newValue in
+                if newValue.isEmpty {
+                    customName = ""
+                    nameManuallyEdited = false
+                } else {
+                    customName = newValue
+                    nameManuallyEdited = true
+                }
+            }
+        )
     }
 
     // MARK: - 图片区（PhotosPicker + 去背预览）
@@ -170,13 +213,55 @@ struct ItemEditorView: View {
     // MARK: - 基本信息
 
     private var basicInfoSection: some View {
-        Section("基本信息") {
-            TextField("名称（如：白色基础款 T 恤）", text: $name)
+        Section {
+            TextField("名称", text: nameBinding, prompt: Text(defaultName))
 
             Picker("分类", selection: $category) {
                 ForEach(Category.allCases) { category in
                     Text(category.displayName).tag(category)
                 }
+            }
+
+            Picker("子类", selection: $subtype) {
+                Text("未指定").tag(Subtype?.none)
+                ForEach(category.subtypes) { sub in
+                    Text(sub.displayName).tag(Subtype?.some(sub))
+                }
+            }
+        } header: {
+            Text("基本信息")
+        } footer: {
+            if !nameManuallyEdited {
+                Text("名称已按「颜色 + 子类」自动生成，可直接修改。")
+            }
+        }
+    }
+
+    // MARK: - 颜色（自动提取）
+
+    @ViewBuilder
+    private var colorSection: some View {
+        if displayImageData != nil {
+            Section("颜色（自动提取）") {
+                HStack(spacing: 24) {
+                    colorSwatch(title: "主色", color: dominantColor)
+                    if let secondaryColor {
+                        colorSwatch(title: "辅色", color: secondaryColor)
+                    }
+                }
+            }
+        }
+    }
+
+    private func colorSwatch(title: String, color: StoredColor) -> some View {
+        HStack(spacing: 10) {
+            RoundedRectangle(cornerRadius: 7)
+                .fill(color.color)
+                .frame(width: 30, height: 30)
+                .overlay(RoundedRectangle(cornerRadius: 7).strokeBorder(.quaternary))
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title).font(.caption).foregroundStyle(.secondary)
+                Text(ColorCategory.classify(color).displayName).font(.subheadline)
             }
         }
     }
@@ -254,13 +339,17 @@ struct ItemEditorView: View {
     // MARK: - 状态
 
     private var statusSection: some View {
-        Section("状态") {
+        Section {
             Picker("当前状态", selection: $status) {
                 ForEach(ItemStatus.allCases) { status in
                     Text(status.displayName).tag(status)
                 }
             }
             .pickerStyle(.segmented)
+        } header: {
+            Text("状态")
+        } footer: {
+            Text("一般通过「脱下穿搭」自动流转；此处可手动调整。")
         }
     }
 
@@ -281,7 +370,7 @@ struct ItemEditorView: View {
         displayImageData != nil && processingState != .processing
     }
 
-    /// 加载所选图片并执行本地抠图。
+    /// 加载所选图片并执行本地抠图 + 取色。
     @MainActor
     private func loadAndProcess(_ item: PhotosPickerItem) async {
         processingState = .processing
@@ -294,13 +383,25 @@ struct ItemEditorView: View {
             // 调用本地 Vision 抠图服务（actor 自动在后台执行）。
             let processed = try await VisionService.shared.removeBackground(from: data)
             processedImageData = processed
+            // 在透明背景图上取色，避免背景干扰。
+            await extractColors(from: processed)
             processingState = .success
         } catch {
-            // 抠图失败：保留原图作为预览，提示用户（仍可保存）。
+            // 抠图失败：保留原图作为预览，并在原图上取色（仍可保存）。
             processedImageData = nil
+            if let original = originalImageData {
+                await extractColors(from: original)
+            }
             let message = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
             processingState = .failed(message)
         }
+    }
+
+    /// 提取主辅色并写入状态（未手动改名时，默认名会随之实时更新）。
+    private func extractColors(from data: Data) async {
+        let colors = await VisionService.shared.extractColors(from: data)
+        dominantColor = colors.dominant
+        secondaryColor = colors.secondary
     }
 
     /// 若季节未被手动编辑，则依据保暖标签自动推导。
@@ -315,11 +416,13 @@ struct ItemEditorView: View {
         let scenarioArray = Scenario.allCases.filter { selectedScenarios.contains($0) }
         let warmthArray = WarmthLevel.allCases.filter { selectedWarmthLevels.contains($0) }
         let seasonArray = Season.allCases.filter { selectedSeasons.contains($0) }
+        let finalName = nameManuallyEdited ? customName : defaultName
 
         if let item = editingItem {
             // 编辑：原地更新。
-            item.name = name
+            item.name = finalName
             item.category = category
+            item.subtype = subtype
             item.scenarios = scenarioArray
             item.warmthLevels = warmthArray
             item.seasons = seasonArray
@@ -328,16 +431,22 @@ struct ItemEditorView: View {
             item.notes = notes.isEmpty ? nil : notes
             item.originalImageData = originalImageData
             item.processedImageData = processedImageData
+            item.dominantColor = dominantColor
+            item.secondaryColor = secondaryColor
+            item.refreshColorCategory()
             item.updatedAt = .now
         } else {
-            // 新增：构造并插入。dominantColor 暂用默认占位，阶段三由 CoreImage 覆盖。
+            // 新增：构造并插入。
             let newItem = ClothingItem(
-                name: name,
+                name: finalName,
                 category: category,
+                subtype: subtype,
                 scenarios: scenarioArray,
                 status: status,
                 processedImageData: processedImageData,
                 originalImageData: originalImageData,
+                dominantColor: dominantColor,
+                secondaryColor: secondaryColor,
                 warmthLevels: warmthArray,
                 seasons: seasonArray,
                 brand: brand.isEmpty ? nil : brand,

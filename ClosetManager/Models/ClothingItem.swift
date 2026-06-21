@@ -10,8 +10,11 @@ final class ClothingItem {
     /// 名称 / 标题（如「白色基础款 T 恤」）。
     var name: String
 
-    /// 分类（互斥单选）。
+    /// 顶层分类（互斥单选）。
     var category: Category
+
+    /// 二级子类（可空，需与 `category` 匹配）。用于精细描述与默认命名。
+    var subtype: Subtype?
 
     /// 适用场景（可多选）。SwiftData 以 JSON 形式持久化该枚举数组。
     var scenarios: [Scenario]
@@ -66,6 +69,7 @@ final class ClothingItem {
         id: UUID = UUID(),
         name: String = "",
         category: Category,
+        subtype: Subtype? = nil,
         scenarios: [Scenario] = [],
         status: ItemStatus = .inWardrobe,
         processedImageData: Data? = nil,
@@ -82,6 +86,7 @@ final class ClothingItem {
         self.id = id
         self.name = name
         self.category = category
+        self.subtype = subtype
         self.scenarios = scenarios
         self.status = status
         self.processedImageData = processedImageData
@@ -104,6 +109,14 @@ final class ClothingItem {
 // MARK: - 业务便捷方法（穿搭引擎 / 录入校验使用）
 
 extension ClothingItem {
+    /// 由颜色与种类组合默认名称，如「绿色短裤」「黑色卫衣」。
+    /// 无子类时退回顶层分类名（如「绿色下装」）。
+    static func defaultName(color: StoredColor, subtype: Subtype?, category: Category) -> String {
+        let colorName = ColorCategory.classify(color).displayName
+        let typeName = subtype?.displayName ?? category.displayName
+        return colorName + typeName
+    }
+
     /// 是否可用于穿搭（在衣橱中）。
     var isAvailable: Bool { status == .inWardrobe }
 

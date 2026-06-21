@@ -15,9 +15,30 @@ struct ClosetManagerApp: App {
     }
 }
 
-/// 根视图。阶段二仅有「衣橱」单页；后续阶段会扩展为 TabView（穿搭 / 日历 / 看板等）。
+/// 根视图：底部 TabView 导航。
+///
+/// 「衣橱」「洗衣袋」已可用；「穿搭」「日历」「看板」为后续阶段，先用占位页占位。
 struct ContentView: View {
     var body: some View {
-        WardrobeGalleryView()
+        TabView {
+            WardrobeGalleryView()
+                .tabItem { Label("衣橱", systemImage: "square.grid.2x2") }
+
+            LaundryView()
+                .tabItem { Label("洗衣房", systemImage: "washer") }
+
+            OutfitHomeView()
+                .tabItem { Label("穿搭", systemImage: "sparkles") }
+
+            CalendarHistoryView()
+                .tabItem { Label("日历", systemImage: "calendar") }
+
+            ComingSoonView(
+                title: "看板",
+                systemImage: "chart.pie",
+                message: "衣橱数据分析看板即将推出。"
+            )
+            .tabItem { Label("看板", systemImage: "chart.pie") }
+        }
     }
 }
