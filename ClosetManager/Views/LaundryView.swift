@@ -72,6 +72,11 @@ struct LaundryView: View {
                             selectionBadge(isSelected: selection.contains(item.id))
                                 .padding(6)
                         }
+                        .overlay(alignment: .bottom) {
+                            if isRetentionWarning(item) {
+                                retentionBadge.padding(6)
+                            }
+                        }
                         .overlay(
                             RoundedRectangle(cornerRadius: 16)
                                 .strokeBorder(selection.contains(item.id) ? Color.accentColor : .clear, lineWidth: 3)
@@ -89,6 +94,24 @@ struct LaundryView: View {
             .imageScale(.large)
             .foregroundStyle(isSelected ? Color.accentColor : Color.secondary)
             .background(Circle().fill(.background))
+    }
+
+    /// 滞留预警：任何衣物在洗衣袋超过 4 天。
+    private func isRetentionWarning(_ item: ClothingItem) -> Bool {
+        guard let entry = item.laundryEntryDate else { return false }
+        return Date.now.timeIntervalSince(entry) > 4 * 24 * 3600
+    }
+
+    private var retentionBadge: some View {
+        HStack(spacing: 3) {
+            Image(systemName: "exclamationmark.triangle.fill")
+            Text("久置·快洗")
+        }
+        .font(.caption2.weight(.bold))
+        .padding(.horizontal, 7)
+        .padding(.vertical, 3)
+        .background(.red, in: Capsule())
+        .foregroundStyle(.white)
     }
 
     private var emptyState: some View {

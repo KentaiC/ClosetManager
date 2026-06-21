@@ -23,6 +23,7 @@ enum Subtype: String, Codable, CaseIterable, Identifiable {
     case sweater           // 毛衣/针织衫
     case tankTop           // 背心/吊带
     case baseLayer         // 打底衫
+    case suit              // 西装（西服上衣）
 
     // 下装 Bottom
     case jeans             // 牛仔裤
@@ -66,7 +67,7 @@ enum Subtype: String, Codable, CaseIterable, Identifiable {
         case .jacket, .trenchCoat, .overcoat, .downJacket, .paddedJacket,
              .leatherJacket, .blazer, .cardigan, .vest:
             return .outerwear
-        case .tee, .polo, .shirt, .hoodie, .sweater, .tankTop, .baseLayer:
+        case .tee, .polo, .shirt, .hoodie, .sweater, .tankTop, .baseLayer, .suit:
             return .top
         case .jeans, .casualPants, .dressPants, .sweatpants, .shorts, .skirt:
             return .bottom
@@ -99,6 +100,7 @@ enum Subtype: String, Codable, CaseIterable, Identifiable {
         case .sweater:       return "毛衣"
         case .tankTop:       return "背心"
         case .baseLayer:     return "打底衫"
+        case .suit:          return "西装"
 
         case .jeans:         return "牛仔裤"
         case .casualPants:   return "休闲裤"

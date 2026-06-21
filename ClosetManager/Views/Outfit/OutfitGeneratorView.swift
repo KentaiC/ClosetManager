@@ -10,6 +10,7 @@ struct OutfitGeneratorView: View {
 
     @State private var warmth: WarmthLevel = .mild
     @State private var scenario: Scenario = .casual
+    @State private var requireWaterproof = false
     @State private var result: OutfitGeneratorService.Result?
     @State private var toast: String?
 
@@ -61,6 +62,11 @@ struct OutfitGeneratorView: View {
                     }
                 }
             }
+            // 雨雪天气强关联：开启后强制外套与鞋子防水。
+            Toggle(isOn: $requireWaterproof) {
+                Label("雨 / 雪天（强制防水外套与鞋子）", systemImage: "cloud.rain")
+            }
+            .font(.subheadline)
         }
     }
 
@@ -129,7 +135,12 @@ struct OutfitGeneratorView: View {
     // MARK: - 操作
 
     private func generate() {
-        result = OutfitGeneratorService.generate(from: allItems, warmth: warmth, scenario: scenario)
+        result = OutfitGeneratorService.generate(
+            from: allItems,
+            warmth: warmth,
+            scenario: scenario,
+            requireWaterproof: requireWaterproof
+        )
     }
 
     private func favorite(_ draft: OutfitDraft) {

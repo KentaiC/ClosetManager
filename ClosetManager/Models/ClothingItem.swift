@@ -19,8 +19,15 @@ final class ClothingItem {
     /// 适用场景（可多选）。SwiftData 以 JSON 形式持久化该枚举数组。
     var scenarios: [Scenario]
 
-    /// 状态机：在衣橱 / 在洗衣袋。
+    /// 状态机：在衣橱 / 在洗衣袋 / 在行李箱。
     var status: ItemStatus
+
+    /// 是否防水（所有分类均可设置）。雨雪天气强关联算法据此筛选外套与鞋子。
+    /// 带默认值以便 SwiftData 轻量迁移。
+    var isWaterproof: Bool = false
+
+    /// 进入洗衣袋的时间（用于滞留预警）；非洗衣袋状态时为 nil。
+    var laundryEntryDate: Date?
 
     // MARK: - 图像（Vision 抠图）
 
@@ -44,7 +51,11 @@ final class ClothingItem {
 
     // MARK: - 保暖程度与季节
 
-    /// 保暖标签（可多选，如一件薄外套适配「凉爽 + 温和」）。穿搭引擎据此匹配当前天气。
+    /// 保暖度（1~100 连续值，录入时用滑条设定）。叠穿算法据此做「保暖度求和匹配气温」与「气温向下兼容」。
+    /// 提供默认值以便 SwiftData 轻量迁移（老数据默认中等保暖 50）。
+    var warmthScore: Int = 50
+
+    /// 保暖标签（由 `warmthScore` 派生的单一档位，保留用于季节推导与展示）。
     var warmthLevels: [WarmthLevel]
 
     /// 适用季节（默认由 `warmthLevels` 自动推导，允许用户手动覆盖）。
@@ -72,10 +83,13 @@ final class ClothingItem {
         subtype: Subtype? = nil,
         scenarios: [Scenario] = [],
         status: ItemStatus = .inWardrobe,
+        isWaterproof: Bool = false,
+        laundryEntryDate: Date? = nil,
         processedImageData: Data? = nil,
         originalImageData: Data? = nil,
         dominantColor: StoredColor = StoredColor(red: 0.5, green: 0.5, blue: 0.5),
         secondaryColor: StoredColor? = nil,
+        warmthScore: Int = 50,
         warmthLevels: [WarmthLevel] = [],
         seasons: [Season]? = nil,
         brand: String? = nil,
@@ -89,14 +103,19 @@ final class ClothingItem {
         self.subtype = subtype
         self.scenarios = scenarios
         self.status = status
+        self.isWaterproof = isWaterproof
+        self.laundryEntryDate = laundryEntryDate
         self.processedImageData = processedImageData
         self.originalImageData = originalImageData
         self.dominantColor = dominantColor
         self.secondaryColor = secondaryColor
         self.dominantColorCategory = ColorCategory.classify(dominantColor)
-        self.warmthLevels = warmthLevels
+        self.warmthScore = warmthScore
+        // 保暖标签由保暖度派生（若调用方未显式给）。用本地常量，避免在 @Model init 中读取 self.属性。
+        let resolvedLevels = warmthLevels.isEmpty ? [WarmthLevel.from(score: warmthScore)] : warmthLevels
+        self.warmthLevels = resolvedLevels
         // 季节未显式指定时，由保暖标签自动推导。
-        self.seasons = seasons ?? Season.derive(from: warmthLevels)
+        self.seasons = seasons ?? Season.derive(from: resolvedLevels)
         self.brand = brand
         self.notes = notes
         self.createdAt = createdAt

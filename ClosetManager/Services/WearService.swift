@@ -84,7 +84,13 @@ enum WearService {
         in context: ModelContext
     ) {
         for item in record.items {
-            item.status = laundryItems.contains(item) ? .inLaundry : .inWardrobe
+            if laundryItems.contains(item) {
+                item.status = .inLaundry
+                item.laundryEntryDate = .now   // 记录入袋时间，用于滞留预警
+            } else {
+                item.status = .inWardrobe
+                item.laundryEntryDate = nil
+            }
             item.updatedAt = .now
         }
         record.isActive = false
@@ -95,6 +101,27 @@ enum WearService {
     /// 将一批单品「洗净放回」衣橱。
     static func returnToWardrobe(_ items: some Sequence<ClothingItem>, in context: ModelContext) {
         for item in items {
+            item.status = .inWardrobe
+            item.laundryEntryDate = nil
+            item.updatedAt = .now
+        }
+    }
+
+    // MARK: - 差旅打包
+
+    /// 将一批单品装入行李箱（差旅期间隔离出日常衣橱）。
+    static func packIntoLuggage(_ items: some Sequence<ClothingItem>, in context: ModelContext) {
+        for item in items {
+            item.status = .inLuggage
+            item.updatedAt = .now
+        }
+    }
+
+    /// 结束差旅：把行李箱里的单品全部取出回到衣橱。
+    static func unpackAllLuggage(in context: ModelContext) {
+        let descriptor = FetchDescriptor<ClothingItem>()
+        guard let all = try? context.fetch(descriptor) else { return }
+        for item in all where item.status == .inLuggage {
             item.status = .inWardrobe
             item.updatedAt = .now
         }

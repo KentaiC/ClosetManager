@@ -12,7 +12,8 @@ struct OutfitDraftCard: View {
     private var slots: [(label: String, item: ClothingItem)] {
         var result: [(String, ClothingItem)] = []
         if let outerwear = draft.outerwear { result.append(("外套", outerwear)) }
-        result.append(("上装", draft.top))
+        if let mid = draft.midLayer { result.append(("中层", mid)) }
+        result.append((draft.midLayer == nil ? "上装" : "打底", draft.top))
         result.append(("下装", draft.bottom))
         if let socks = draft.socks { result.append(("袜子", socks)) }
         result.append(("鞋子", draft.shoes))

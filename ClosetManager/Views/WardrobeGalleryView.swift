@@ -1,7 +1,8 @@
 import SwiftUI
 import SwiftData
+import PhotosUI
 
-/// 衣橱主页：网格瀑布流展示所有单品，支持按分类过滤、新增与编辑。
+/// 衣橱主页：网格展示单品，支持分类过滤、洗衣袋隔离、视图大小切换、单件/批量录入与设置入口。
 struct WardrobeGalleryView: View {
     @Environment(\.modelContext) private var modelContext
 
@@ -12,16 +13,39 @@ struct WardrobeGalleryView: View {
     /// 当前分类过滤；nil 表示「全部」。
     @State private var selectedCategory: Category?
 
+    /// 是否显示洗衣袋内衣物（默认隐藏）。
+    @State private var showLaundry = false
+
+    /// 视图大小（@AppStorage 持久化）。
+    @AppStorage("galleryItemSize") private var sizeRaw = GalleryItemSize.medium.rawValue
+    private var size: GalleryItemSize { GalleryItemSize(rawValue: sizeRaw) ?? .medium }
+
     /// 编辑器路由（新增 / 编辑），用单一 sheet 承载。
     @State private var editorRoute: EditorRoute?
 
-    /// 自适应网格列：每列最小 110pt，自动决定列数。
-    private let columns = [GridItem(.adaptive(minimum: 110), spacing: 16)]
+    /// 设置页。
+    @State private var showSettings = false
 
-    /// 按当前分类过滤后的单品。
+    /// 批量录入。
+    @State private var showBatchPicker = false
+    @State private var batchItems: [PhotosPickerItem] = []
+    @State private var showBatchEditor = false
+
+    /// 高级筛选页开关。
+    @State private var showSearch = false
+
+    /// 按「洗衣袋/行李箱隔离 + 分类」过滤后的单品。
+    /// 行李箱(`inLuggage`)始终隔离；洗衣袋(`inLaundry`)仅在开关开启时显示。
     private var filteredItems: [ClothingItem] {
-        guard let selectedCategory else { return items }
-        return items.filter { $0.category == selectedCategory }
+        items
+            .filter { item in
+                switch item.status {
+                case .inWardrobe: return true
+                case .inLaundry:  return showLaundry
+                case .inLuggage:  return false
+                }
+            }
+            .filter { selectedCategory == nil || $0.category == selectedCategory }
     }
 
     var body: some View {
@@ -32,33 +56,95 @@ struct WardrobeGalleryView: View {
                     .padding(.horizontal)
                     .padding(.top, 8)
 
+                if showLaundry {
+                    laundryNotice
+                }
+
                 if items.isEmpty {
-                    emptyState
-                        .padding(.top, 40)
+                    emptyState.padding(.top, 40)
                 } else {
                     categoryBar
                     gridContent
                 }
             }
             .navigationTitle("我的衣橱")
-            .toolbar {
-                ToolbarItem(placement: .primaryAction) {
-                    Button {
-                        editorRoute = .new
-                    } label: {
-                        Label("添加单品", systemImage: "plus")
-                    }
-                }
-            }
+            .toolbar { toolbarContent }
             .sheet(item: $editorRoute) { route in
                 switch route {
-                case .new:
-                    ItemEditorView()
-                case .edit(let item):
-                    ItemEditorView(editingItem: item)
+                case .new:  ItemEditorView()
+                case .edit(let item): ItemEditorView(editingItem: item)
                 }
             }
+            .sheet(isPresented: $showSettings) {
+                SettingsView()
+            }
+            .sheet(isPresented: $showSearch) {
+                WardrobeSearchView()
+            }
+            .sheet(isPresented: $showBatchEditor, onDismiss: { batchItems = [] }) {
+                BatchImportView(queue: batchItems)
+            }
+            .photosPicker(
+                isPresented: $showBatchPicker,
+                selection: $batchItems,
+                maxSelectionCount: 30,
+                matching: .images
+            )
+            .onChange(of: batchItems) { _, newItems in
+                if !newItems.isEmpty { showBatchEditor = true }
+            }
         }
+    }
+
+    // MARK: - 工具栏
+
+    @ToolbarContentBuilder
+    private var toolbarContent: some ToolbarContent {
+        ToolbarItem(placement: .topBarLeading) {
+            Button { showSettings = true } label: {
+                Image(systemName: "gearshape")
+            }
+        }
+        ToolbarItem(placement: .topBarLeading) {
+            Button { showSearch = true } label: {
+                Image(systemName: "line.3.horizontal.decrease.circle")
+            }
+        }
+        ToolbarItem(placement: .primaryAction) {
+            Menu {
+                Picker("视图大小", selection: $sizeRaw) {
+                    ForEach(GalleryItemSize.allCases) { size in
+                        Label(size.displayName, systemImage: size.symbolName).tag(size.rawValue)
+                    }
+                }
+                Toggle("显示洗衣袋内衣物", isOn: $showLaundry)
+            } label: {
+                Image(systemName: "slider.horizontal.3")
+            }
+        }
+        ToolbarItem(placement: .primaryAction) {
+            Menu {
+                Button { editorRoute = .new } label: {
+                    Label("单件录入", systemImage: "plus")
+                }
+                Button { showBatchPicker = true } label: {
+                    Label("批量录入", systemImage: "square.stack.3d.up")
+                }
+            } label: {
+                Image(systemName: "plus")
+            }
+        }
+    }
+
+    // MARK: - 洗衣袋提示条
+
+    private var laundryNotice: some View {
+        Label("正在显示洗衣袋内衣物", systemImage: "drop.fill")
+            .font(.caption)
+            .foregroundStyle(.blue)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal)
+            .padding(.top, 8)
     }
 
     // MARK: - 分类导航栏
@@ -89,19 +175,17 @@ struct WardrobeGalleryView: View {
     private var gridContent: some View {
         if filteredItems.isEmpty {
             ContentUnavailableView(
-                "该分类下还没有单品",
+                "该分类下没有可显示的单品",
                 systemImage: "square.grid.2x2",
-                description: Text("换个分类，或点击右上角 ＋ 添加。")
+                description: Text("换个分类，或在右上角 ＋ 添加。")
             )
             .padding(.top, 40)
         } else {
-            LazyVGrid(columns: columns, spacing: 16) {
+            LazyVGrid(columns: size.columns, spacing: size.spacing) {
                 ForEach(filteredItems) { item in
-                    ItemCard(item: item)
+                    ItemCard(item: item, compact: !size.showsLabels)
                         .contentShape(Rectangle())
-                        .onTapGesture {
-                            editorRoute = .edit(item)
-                        }
+                        .onTapGesture { editorRoute = .edit(item) }
                         .contextMenu {
                             Button(role: .destructive) {
                                 delete(item)

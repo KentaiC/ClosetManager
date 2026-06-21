@@ -15,10 +15,14 @@ struct ClosetManagerApp: App {
     }
 }
 
-/// 根视图：底部 TabView 导航。
-///
-/// 「衣橱」「洗衣袋」已可用；「穿搭」「日历」「看板」为后续阶段，先用占位页占位。
+/// 根视图：底部 TabView 导航。应用全局强调色与外观模式（用户自定义，@AppStorage）。
 struct ContentView: View {
+    @AppStorage(UIPreferenceKeys.accent) private var accentRaw = AccentChoice.purple.rawValue
+    @AppStorage(UIPreferenceKeys.appearance) private var appearanceRaw = AppearanceMode.system.rawValue
+
+    private var accent: Color { (AccentChoice(rawValue: accentRaw) ?? .purple).color }
+    private var appearance: ColorScheme? { (AppearanceMode(rawValue: appearanceRaw) ?? .system).colorScheme }
+
     var body: some View {
         TabView {
             WardrobeGalleryView()
@@ -33,12 +37,10 @@ struct ContentView: View {
             CalendarHistoryView()
                 .tabItem { Label("日历", systemImage: "calendar") }
 
-            ComingSoonView(
-                title: "看板",
-                systemImage: "chart.pie",
-                message: "衣橱数据分析看板即将推出。"
-            )
-            .tabItem { Label("看板", systemImage: "chart.pie") }
+            AnalyticsDashboardView()
+                .tabItem { Label("看板", systemImage: "chart.pie") }
         }
+        .tint(accent)
+        .preferredColorScheme(appearance)
     }
 }
