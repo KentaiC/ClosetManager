@@ -79,7 +79,16 @@ final class ItemDraftModel {
 
     // MARK: - 处理
 
-    /// 处理所选图片：本地抠图 + 取色。
+    /// 处理统一图片来源（相册项 / 文件或拖拽的 Data）。
+    @MainActor
+    func process(source: ImageSource) async {
+        switch source.kind {
+        case .photo(let item): await process(item)
+        case .data(let data):  await process(data: data)
+        }
+    }
+
+    /// 处理相册项：先取出 Data，再走统一抠图 + 取色流程。
     @MainActor
     func process(_ item: PhotosPickerItem) async {
         processingState = .processing
@@ -88,19 +97,38 @@ final class ItemDraftModel {
                 processingState = .failed("无法读取所选图片。")
                 return
             }
-            originalImageData = data
+            await ingest(data)
+        } catch {
+            failProcessing(error)
+        }
+    }
+
+    /// 处理已加载的图片数据（来自文件 / 拖拽）。
+    @MainActor
+    func process(data: Data) async {
+        processingState = .processing
+        await ingest(data)
+    }
+
+    /// 统一流程：存原图 → 本地抠图 → 取色。抠图失败回退原图取色（仍可保存）。
+    @MainActor
+    private func ingest(_ data: Data) async {
+        originalImageData = data
+        do {
             let processed = try await VisionService.shared.removeBackground(from: data)
             processedImageData = processed
             await extractColors(from: processed)
             processingState = .success
         } catch {
             processedImageData = nil
-            if let original = originalImageData {
-                await extractColors(from: original)
-            }
-            let message = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
-            processingState = .failed(message)
+            await extractColors(from: data)
+            failProcessing(error)
         }
+    }
+
+    private func failProcessing(_ error: Error) {
+        let message = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
+        processingState = .failed(message)
     }
 
     @MainActor

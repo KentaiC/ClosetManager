@@ -3,11 +3,12 @@ import SwiftData
 import PhotosUI
 
 /// 批量录入向导：保留全部所选图片，逐张抠图取色并打标签，「保存并下一件」推进队列直至清空。
+/// 队列来源统一为 `ImageSource`——相册多选、从文件多选、拖拽释放都走这同一条流程。
 struct BatchImportView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
 
-    let queue: [PhotosPickerItem]
+    let queue: [ImageSource]
 
     @State private var index = 0
     @State private var model = ItemDraftModel()
@@ -36,7 +37,7 @@ struct BatchImportView: View {
                 guard index < queue.count else { return }
                 let fresh = ItemDraftModel()
                 model = fresh
-                await fresh.process(queue[index])
+                await fresh.process(source: queue[index])
             }
         }
     }

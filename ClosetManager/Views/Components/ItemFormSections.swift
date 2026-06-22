@@ -1,15 +1,18 @@
 import SwiftUI
 import PhotosUI
+import UniformTypeIdentifiers
 
 /// 可复用的单品录入表单区块（绑定 `ItemDraftModel`）。
 ///
-/// 放进父级的 `Form { }` 中使用。单件编辑显示相册选择器；批量录入由队列预置图片，
+/// 放进父级的 `Form { }` 中使用。单件编辑显示「相册 / 文件」选图菜单；批量录入由队列预置图片，
 /// 用 `allowsPhotoPicker: false` 隐藏选择器。
 struct ItemFormSections: View {
     @Bindable var model: ItemDraftModel
     var allowsPhotoPicker: Bool = true
 
     @State private var pickerItem: PhotosPickerItem?
+    @State private var showPhotoPicker = false
+    @State private var showFileImporter = false
     /// 用于把 ColorPicker 选中的 Color 解析为 sRGB 分量。
     @Environment(\.self) private var environment
 
@@ -34,6 +37,24 @@ struct ItemFormSections: View {
         .onChange(of: model.category) { _, _ in
             model.reconcileSubtype()
         }
+        .photosPicker(isPresented: $showPhotoPicker, selection: $pickerItem, matching: .images, photoLibrary: .shared())
+        .fileImporter(
+            isPresented: $showFileImporter,
+            allowedContentTypes: [.image],
+            allowsMultipleSelection: false
+        ) { result in
+            handleFileImport(result)
+        }
+    }
+
+    /// 从文件导入单张图片（单件编辑场景）。正确处理 iCloud Drive 的安全沙盒资源。
+    private func handleFileImport(_ result: Result<[URL], Error>) {
+        guard case .success(let urls) = result, let url = urls.first else { return }
+        // 关键：iCloud / 外部文件 URL 受沙盒保护，必须先申请访问权限再读取，读完释放。
+        let scoped = url.startAccessingSecurityScopedResource()
+        defer { if scoped { url.stopAccessingSecurityScopedResource() } }
+        guard let data = try? Data(contentsOf: url) else { return }
+        Task { await model.process(data: data) }
     }
 
     // MARK: - 名称绑定
@@ -61,13 +82,20 @@ struct ItemFormSections: View {
             VStack(spacing: 12) {
                 previewArea
                 if allowsPhotoPicker {
-                    PhotosPicker(
-                        selection: $pickerItem,
-                        matching: .images,
-                        photoLibrary: .shared()
-                    ) {
-                        Label(model.displayImageData == nil ? "从相册选择图片" : "更换图片",
-                              systemImage: "photo.on.rectangle.angled")
+                    Menu {
+                        Button {
+                            showPhotoPicker = true
+                        } label: {
+                            Label("从相册选取", systemImage: "photo.on.rectangle")
+                        }
+                        Button {
+                            showFileImporter = true
+                        } label: {
+                            Label("从文件选取", systemImage: "folder")
+                        }
+                    } label: {
+                        Label(model.displayImageData == nil ? "添加图片" : "更换图片",
+                              systemImage: "photo.badge.plus")
                     }
                     .disabled(model.processingState == .processing)
                 }

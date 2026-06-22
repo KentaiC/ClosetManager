@@ -1,6 +1,7 @@
 import SwiftUI
 import SwiftData
 import PhotosUI
+import UniformTypeIdentifiers
 
 /// 衣橱主页：网格展示单品，支持分类过滤、洗衣袋隔离、视图大小切换、单件/批量录入与设置入口。
 struct WardrobeGalleryView: View {
@@ -26,10 +27,14 @@ struct WardrobeGalleryView: View {
     /// 设置页。
     @State private var showSettings = false
 
-    /// 批量录入。
+    /// 批量录入（相册多选 / 文件多选 / 拖拽，统一汇入 batchSources）。
     @State private var showBatchPicker = false
+    @State private var showBatchFileImporter = false
     @State private var batchItems: [PhotosPickerItem] = []
+    @State private var batchSources: [ImageSource] = []
     @State private var showBatchEditor = false
+    /// 拖拽悬停高亮。
+    @State private var isDropTargeted = false
 
     /// 高级筛选页开关。
     @State private var showSearch = false
@@ -67,6 +72,20 @@ struct WardrobeGalleryView: View {
                     gridContent
                 }
             }
+            // 拖拽释放：从 Finder / 网页 / 其他 App 拖入图片 → 捕获 Data → 触发批量编辑向导。
+            .dropDestination(for: Data.self) { datas, _ in
+                guard !datas.isEmpty else { return false }
+                startBatch(with: datas.map(ImageSource.data))
+                return true
+            } isTargeted: { isDropTargeted = $0 }
+            .overlay {
+                if isDropTargeted {
+                    RoundedRectangle(cornerRadius: 16)
+                        .strokeBorder(Color.accentColor, style: StrokeStyle(lineWidth: 3, dash: [8]))
+                        .padding(8)
+                        .allowsHitTesting(false)
+                }
+            }
             .navigationTitle("我的衣橱")
             .toolbar { toolbarContent }
             .sheet(item: $editorRoute) { route in
@@ -81,8 +100,8 @@ struct WardrobeGalleryView: View {
             .sheet(isPresented: $showSearch) {
                 WardrobeSearchView()
             }
-            .sheet(isPresented: $showBatchEditor, onDismiss: { batchItems = [] }) {
-                BatchImportView(queue: batchItems)
+            .sheet(isPresented: $showBatchEditor, onDismiss: { batchSources = []; batchItems = [] }) {
+                BatchImportView(queue: batchSources)
             }
             .photosPicker(
                 isPresented: $showBatchPicker,
@@ -91,9 +110,37 @@ struct WardrobeGalleryView: View {
                 matching: .images
             )
             .onChange(of: batchItems) { _, newItems in
-                if !newItems.isEmpty { showBatchEditor = true }
+                // 相册多选 → 转为统一来源并进入批量编辑。
+                if !newItems.isEmpty { startBatch(with: newItems.map(ImageSource.photo)) }
+            }
+            .fileImporter(
+                isPresented: $showBatchFileImporter,
+                allowedContentTypes: [.image],
+                allowsMultipleSelection: true
+            ) { result in
+                handleBatchFileImport(result)
             }
         }
+    }
+
+    /// 进入批量编辑向导。
+    private func startBatch(with sources: [ImageSource]) {
+        guard !sources.isEmpty else { return }
+        batchSources = sources
+        showBatchEditor = true
+    }
+
+    /// 从文件多选导入：逐个 URL 在安全沙盒内读取为 Data，再汇入批量编辑。
+    private func handleBatchFileImport(_ result: Result<[URL], Error>) {
+        guard case .success(let urls) = result else { return }
+        var datas: [Data] = []
+        for url in urls {
+            // 关键：iCloud Drive 等外部文件 URL 受沙盒保护，必须先申请权限再读取，读完释放，否则会权限崩溃。
+            let scoped = url.startAccessingSecurityScopedResource()
+            defer { if scoped { url.stopAccessingSecurityScopedResource() } }
+            if let data = try? Data(contentsOf: url) { datas.append(data) }
+        }
+        startBatch(with: datas.map(ImageSource.data))
     }
 
     // MARK: - 工具栏
@@ -128,7 +175,10 @@ struct WardrobeGalleryView: View {
                     Label("单件录入", systemImage: "plus")
                 }
                 Button { showBatchPicker = true } label: {
-                    Label("批量录入", systemImage: "square.stack.3d.up")
+                    Label("从相册批量录入", systemImage: "photo.on.rectangle")
+                }
+                Button { showBatchFileImporter = true } label: {
+                    Label("从文件批量录入", systemImage: "folder")
                 }
             } label: {
                 Image(systemName: "plus")
