@@ -1,4 +1,5 @@
 import Foundation
+import SwiftUI
 import PhotosUI
 
 /// 批量录入的统一图片来源，让「相册多选 / 从文件多选 / 拖拽释放」三种入口
