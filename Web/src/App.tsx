@@ -12,8 +12,8 @@ import { BatchImportPage } from './features/items/BatchImportPage'
 import { NewItemPage } from './features/items/NewItemPage'
 import { SimilarItemsPage } from './features/items/SimilarItemsPage'
 import { LaundryPage } from './features/laundry/LaundryPage'
+import { NotFoundPage } from './features/notFound/NotFoundPage'
 import { OutfitsPage } from './features/outfits/OutfitsPage'
-import { ComingSoon } from './features/placeholder/ComingSoon'
 import { SearchPage } from './features/search/SearchPage'
 import { SettingsPage } from './features/settings/SettingsPage'
 import { TravelPage } from './features/travel/TravelPage'
@@ -59,7 +59,7 @@ function Page({ route }: { route: Route }) {
     case 'similar':
       return <SimilarItemsPage />
     case 'notFound':
-      return <ComingSoon title="页面不存在" />
+      return <NotFoundPage />
   }
 }
 

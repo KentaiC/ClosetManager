@@ -32,4 +32,13 @@ describe('App shell', () => {
     expect(await screen.findByText('未找到该单品')).toBeInTheDocument()
     expect(screen.getByRole('link', { name: '返回衣橱' })).toHaveAttribute('href', '/')
   })
+
+  it('shows a not-found page for unknown addresses', async () => {
+    window.history.replaceState(null, '', '/nowhere')
+    mockFetch(standardRoutes)
+    render(<App />)
+    expect(await screen.findByRole('heading', { name: '页面不存在' })).toBeInTheDocument()
+    expect(screen.getByText('没有找到这个页面')).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: '返回衣橱' })).toHaveAttribute('href', '/')
+  })
 })

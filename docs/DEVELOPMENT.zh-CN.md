@@ -47,6 +47,8 @@
 分层：**Models（数据） → Services / ViewModels（逻辑） → Views（UI）**。SwiftData 通过 `@Query` 让 UI 在数据变更时自动刷新，实现「改状态即刷新」。
 
 > 2026-10 起，不依赖 Apple 专属框架的领域类型与规则已集中到 `ClosetManager/Core/`，同时作为 Swift Package `ClosetCore` 供本地 Web 服务端复用。下方目录树中的 `Models/Enums`、`Support/StoredColor.swift`、`TravelService.swift`、`AnalyticsService.swift` 已移入该目录，详见 [WEB_MIGRATION.zh-CN.md](WEB_MIGRATION.zh-CN.md)。
+>
+> 同样为了与本地 Web 服务端共用，`VisionService.swift` 与 `DuplicationDetectorService.swift` 已从 `Services/` 移到 `ClosetManager/Imaging/`，其中的取色与相似分组规则移入 Core 的 `ColorExtraction` 与 `SimilarityGrouping`。App 中的调用方式不变。
 
 ```
 ClosetManager/
