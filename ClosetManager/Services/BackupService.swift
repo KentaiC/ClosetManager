@@ -1,12 +1,6 @@
 import Foundation
 import SwiftData
 
-/// 导入模式：覆盖（清空后导入）或合并（按 id 跳过已存在）。
-enum RestoreMode {
-    case overwrite
-    case merge
-}
-
 /// 本地数据冷备份：把数据库记录 + 图片打包为单个 JSON 文件（图片以 base64 内联）。
 ///
 /// 设计：用 Sendable 的 Codable DTO 序列化，**不直接序列化 @Model**；导出为 `.wardrobe`（JSON）。
@@ -14,56 +8,11 @@ enum BackupService {
 
     // MARK: - DTO
 
-    struct Bundle: Codable {
-        var version = 1
-        var items: [ItemDTO]
-        var outfits: [OutfitDTO]
-        var wearRecords: [WearRecordDTO]
-    }
-
-    struct ItemDTO: Codable {
-        var id: UUID
-        var name: String
-        var category: String
-        var subtype: String?
-        var scenarios: [String]
-        var status: String
-        var isWaterproof: Bool
-        var laundryEntryDate: Date?
-        var dominantColor: StoredColor
-        var secondaryColor: StoredColor?
-        var warmthScore: Int
-        var warmthLevels: [String]
-        var seasons: [String]
-        var brand: String?
-        var notes: String?
-        var createdAt: Date
-        var updatedAt: Date
-        var processedImageBase64: String?
-        var originalImageBase64: String?
-    }
-
-    struct OutfitDTO: Codable {
-        var id: UUID
-        var name: String
-        var isFavorite: Bool
-        var source: String
-        var targetScenario: String?
-        var targetWarmthLevel: String?
-        var itemIDs: [UUID]
-        var createdAt: Date
-        var updatedAt: Date
-    }
-
-    struct WearRecordDTO: Codable {
-        var id: UUID
-        var date: Date
-        var isActive: Bool
-        var outfitID: UUID?
-        var itemIDs: [UUID]
-        var notes: String?
-        var createdAt: Date
-    }
+    // 备份文件格式定义在共享核心 `WardrobeBackup` 中，本地 Web 服务端读写同一种文件。
+    typealias Bundle = WardrobeBackup.Bundle
+    typealias ItemDTO = WardrobeBackup.ItemDTO
+    typealias OutfitDTO = WardrobeBackup.OutfitDTO
+    typealias WearRecordDTO = WardrobeBackup.WearRecordDTO
 
     // MARK: - 导出
 
@@ -117,8 +66,7 @@ enum BackupService {
 
     /// 导出为临时 `.wardrobe` 文件，返回 URL 供 `ShareLink` 分享。
     static func exportFile(in context: ModelContext) throws -> URL {
-        let encoder = JSONEncoder()
-        encoder.dateEncodingStrategy = .iso8601
+        let encoder = WardrobeBackup.makeEncoder()
         let data = try encoder.encode(makeBundle(in: context))
 
         let stamp = ISO8601DateFormatter().string(from: .now)
@@ -137,8 +85,7 @@ enum BackupService {
         defer { if needsScope { url.stopAccessingSecurityScopedResource() } }
 
         let data = try Data(contentsOf: url)
-        let decoder = JSONDecoder()
-        decoder.dateDecodingStrategy = .iso8601
+        let decoder = WardrobeBackup.makeDecoder()
         let bundle = try decoder.decode(Bundle.self, from: data)
         apply(bundle, mode: mode, in: context)
     }

@@ -1,0 +1,87 @@
+{
+  "version": 1,
+  "items": [
+    {
+      "id": "7A2C1D9E-3B4F-4C5A-9D6E-1F2A3B4C5D6E",
+      "name": "白色T恤",
+      "category": "top",
+      "subtype": "tee",
+      "scenarios": ["work", "casual"],
+      "status": "inWardrobe",
+      "isWaterproof": false,
+      "dominantColor": {"red": 0.96, "green": 0.96, "blue": 0.96, "alpha": 1},
+      "warmthScore": 20,
+      "warmthLevels": ["warm"],
+      "seasons": ["spring", "summer"],
+      "brand": "示例品牌",
+      "createdAt": "2026-06-20T08:00:00Z",
+      "updatedAt": "2026-06-21T09:30:00Z",
+      "processedImageBase64": "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/5+hHgAHggJ/PchI7wAAAABJRU5ErkJggg==",
+      "originalImageBase64": "/9j/4AAQSkZJRgABAQAAAQABAAD/2Q=="
+    },
+    {
+      "id": "8B3D2E0F-4C5A-4D6B-8E7F-2A3B4C5D6E7F",
+      "name": "",
+      "category": "bottom",
+      "subtype": "jeans",
+      "scenarios": [],
+      "status": "inLaundry",
+      "isWaterproof": false,
+      "laundryEntryDate": "2026-07-01T20:15:00Z",
+      "dominantColor": {"red": 0.12, "green": 0.16, "blue": 0.31, "alpha": 1},
+      "secondaryColor": {"red": 0.5, "green": 0.5, "blue": 0.5, "alpha": 1},
+      "warmthScore": 50,
+      "warmthLevels": ["cool", "mild"],
+      "seasons": [],
+      "createdAt": "2026-06-20T08:05:00Z",
+      "updatedAt": "2026-07-01T20:15:00Z"
+    },
+    {
+      "id": "9C4E3F1A-5D6B-4E7C-9F8A-3B4C5D6E7F8A",
+      "name": "防水靴",
+      "category": "shoes",
+      "subtype": "boots",
+      "scenarios": ["casual"],
+      "status": "inLuggage",
+      "isWaterproof": true,
+      "dominantColor": {"red": 0.3, "green": 0.2, "blue": 0.1, "alpha": 1},
+      "warmthScore": 60,
+      "warmthLevels": ["cool"],
+      "seasons": ["spring", "autumn"],
+      "notes": "雨天穿",
+      "createdAt": "2026-06-22T10:00:00Z",
+      "updatedAt": "2026-06-22T10:00:00Z"
+    }
+  ],
+  "outfits": [
+    {
+      "id": "A1B2C3D4-E5F6-4A7B-8C9D-0E1F2A3B4C5D",
+      "name": "收藏穿搭",
+      "isFavorite": true,
+      "source": "generated",
+      "targetScenario": "casual",
+      "targetWarmthLevel": "mild",
+      "itemIDs": ["7A2C1D9E-3B4F-4C5A-9D6E-1F2A3B4C5D6E", "8B3D2E0F-4C5A-4D6B-8E7F-2A3B4C5D6E7F", "9C4E3F1A-5D6B-4E7C-9F8A-3B4C5D6E7F8A"],
+      "createdAt": "2026-06-23T07:00:00Z",
+      "updatedAt": "2026-06-23T07:00:00Z"
+    }
+  ],
+  "wearRecords": [
+    {
+      "id": "B2C3D4E5-F6A7-4B8C-9D0E-1F2A3B4C5D6E",
+      "date": "2026-06-24T08:00:00Z",
+      "isActive": false,
+      "outfitID": "A1B2C3D4-E5F6-4A7B-8C9D-0E1F2A3B4C5D",
+      "itemIDs": ["7A2C1D9E-3B4F-4C5A-9D6E-1F2A3B4C5D6E", "8B3D2E0F-4C5A-4D6B-8E7F-2A3B4C5D6E7F", "9C4E3F1A-5D6B-4E7C-9F8A-3B4C5D6E7F8A"],
+      "createdAt": "2026-06-24T08:00:00Z"
+    },
+    {
+      "id": "C3D4E5F6-A7B8-4C9D-8E0F-2A3B4C5D6E7F",
+      "date": "2026-07-01T08:00:00Z",
+      "isActive": true,
+      "itemIDs": ["7A2C1D9E-3B4F-4C5A-9D6E-1F2A3B4C5D6E"],
+      "notes": "只穿了上衣",
+      "createdAt": "2026-07-01T08:00:00Z"
+    }
+  ]
+}

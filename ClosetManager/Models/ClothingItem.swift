@@ -112,7 +112,7 @@ final class ClothingItem {
         self.dominantColorCategory = ColorCategory.classify(dominantColor)
         self.warmthScore = warmthScore
         // 保暖标签由保暖度派生（若调用方未显式给）。用本地常量，避免在 @Model init 中读取 self.属性。
-        let resolvedLevels = warmthLevels.isEmpty ? [WarmthLevel.from(score: warmthScore)] : warmthLevels
+        let resolvedLevels = ItemDefaults.resolvedWarmthLevels(warmthLevels, warmthScore: warmthScore)
         self.warmthLevels = resolvedLevels
         // 季节未显式指定时，由保暖标签自动推导。
         self.seasons = seasons ?? Season.derive(from: resolvedLevels)
@@ -131,9 +131,7 @@ extension ClothingItem {
     /// 由颜色与种类组合默认名称，如「绿色短裤」「黑色卫衣」。
     /// 无子类时退回顶层分类名（如「绿色下装」）。
     static func defaultName(color: StoredColor, subtype: Subtype?, category: Category) -> String {
-        let colorName = ColorCategory.classify(color).displayName
-        let typeName = subtype?.displayName ?? category.displayName
-        return colorName + typeName
+        ItemDefaults.defaultName(color: color, subtype: subtype, category: category)
     }
 
     /// 是否可用于穿搭（在衣橱中）。
