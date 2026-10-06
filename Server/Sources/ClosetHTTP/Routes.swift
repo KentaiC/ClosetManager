@@ -12,6 +12,7 @@ struct APIRoutes: Sendable {
     let store: ClosetStore
     let catalog: CatalogService
     let capabilities: APIHealth.Capabilities
+    let now: @Sendable () -> Date
 
     func register(on router: Router<BasicRequestContext>) {
         let api = router.group("api/v1")
@@ -23,6 +24,7 @@ struct APIRoutes: Sendable {
         api.get("outfits", use: listOutfits)
         api.get("wear-records", use: listWearRecords)
         api.get("wear-records/active", use: activeWearRecord)
+        WriteRoutes(store: store, catalog: catalog, now: now).register(on: api)
     }
 
     // MARK: - 处理函数
@@ -36,14 +38,16 @@ struct APIRoutes: Sendable {
         let query = request.uri.queryParameters
         let status: ItemStatus? = try Self.enumParameter(query.get("status"), name: "status")
         let category: ClosetCore.Category? = try Self.enumParameter(query.get("category"), name: "category")
-        let items = try await catalog.items(ItemFilter(status: status, category: category))
-        return APIList(items: items.map(APIItem.init))
+        let sort: ItemFilter.Sort = try Self.enumParameter(query.get("sort"), name: "sort") ?? .createdAt
+        let items = try await catalog.items(ItemFilter(status: status, category: category, sort: sort))
+        let timestamp = now()
+        return APIList(items: items.map { APIItem($0, now: timestamp) })
     }
 
     @Sendable func getItem(_ request: Request, context: BasicRequestContext) async throws -> APIItem {
         let id = try Self.uuidParameter(context)
         guard let item = try await catalog.item(id: id) else { throw APIError.notFound("未找到该单品。") }
-        return APIItem(item)
+        return APIItem(item, now: now())
     }
 
     @Sendable func getItemImage(_ request: Request, context: BasicRequestContext) async throws -> Response {

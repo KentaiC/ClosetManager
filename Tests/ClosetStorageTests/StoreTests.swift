@@ -148,3 +148,76 @@ final class StoreTests: XCTestCase {
         XCTAssertEqual(counts.items + counts.outfits + counts.wearRecords, 0)
     }
 }
+
+final class StoreWriteTests: XCTestCase {
+    var store: ClosetStore!
+
+    override func setUp() async throws {
+        store = try ClosetStore(inMemoryWithMediaRoot: try makeTemporaryDirectory())
+    }
+
+    func testUpdateItemReplacesMutableFields() async throws {
+        let original = makeItem(.tee)
+        try await store.transaction { try $0.insertItem(original) }
+        var changed = original
+        changed.name = "新名字"
+        changed.category = .bottom
+        changed.subtype = .jeans
+        changed.scenarios = [.sport]
+        changed.secondaryColor = nil
+        changed.updatedAt = Date(timeIntervalSince1970: 1_790_000_000)
+        let updated = changed
+        let found = try await store.transaction { try $0.updateItem(updated) }
+        XCTAssertTrue(found)
+        let loaded = try await store.read { try $0.item(id: original.id) }
+        XCTAssertEqual(loaded, updated)
+        var ghost = makeItem()
+        ghost.id = UUID()
+        let ghostItem = ghost
+        let missing = try await store.transaction { try $0.updateItem(ghostItem) }
+        XCTAssertFalse(missing)
+    }
+
+    func testStateUpdateDeleteAndLastWorn() async throws {
+        let a = makeItem(.tee), b = makeItem(.jeans)
+        let t1 = Date(timeIntervalSince1970: 1_760_000_000), t2 = Date(timeIntervalSince1970: 1_770_000_000)
+        try await store.transaction { s in
+            try s.insertItem(a); try s.insertItem(b)
+            try s.insertWearRecord(StoredWearRecord(id: UUID(), date: t1, isActive: false, outfitID: nil, members: [SlottedItemID(itemID: a.id)], notes: nil, createdAt: t1))
+            try s.insertWearRecord(StoredWearRecord(id: UUID(), date: t2, isActive: true, outfitID: nil, members: [SlottedItemID(itemID: a.id)], notes: nil, createdAt: t2))
+        }
+        let lastWorn = try await store.read { try $0.lastWornDates() }
+        XCTAssertEqual(lastWorn, [a.id: t2])
+
+        try await store.transaction { try $0.updateItemState(id: b.id, state: .init(status: .inLaundry, laundryEntryDate: t2), updatedAt: t2) }
+        let laundry = try await store.read { try $0.item(id: b.id) }
+        XCTAssertEqual(laundry?.status, .inLaundry)
+        XCTAssertEqual(laundry?.laundryEntryDate, t2)
+
+        try await store.transaction { try $0.deactivateWearRecords() }
+        let active = try await store.read { try $0.activeWearRecord() }
+        XCTAssertNil(active)
+
+        let deleted = try await store.transaction { try $0.deleteItem(id: a.id) }
+        XCTAssertTrue(deleted)
+        let records = try await store.read { try $0.wearRecords() }
+        XCTAssertEqual(records.count, 2)
+        XCTAssertTrue(records.allSatisfy { $0.members.isEmpty })
+    }
+
+    func testSettingsUpsert() async throws {
+        let t = Date(timeIntervalSince1970: 1)
+        try await store.transaction { try $0.putSetting("profile", json: #"{"age":1}"#, updatedAt: t) }
+        try await store.transaction { try $0.putSetting("profile", json: #"{"age":2}"#, updatedAt: t) }
+        let value = try await store.read { try $0.setting("profile") }
+        XCTAssertEqual(value, #"{"age":2}"#)
+        let missing = try await store.read { try $0.setting("nothing") }
+        XCTAssertNil(missing)
+        do {
+            try await store.transaction { try $0.putSetting("bad", json: "not json", updatedAt: t) }
+            XCTFail("invalid JSON must be rejected")
+        } catch let error as SQLiteError {
+            XCTAssertTrue(error.isConstraintViolation)
+        }
+    }
+}

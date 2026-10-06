@@ -26,7 +26,8 @@ public func makeRouter(
     store: ClosetStore,
     configuration: ServerConfiguration,
     policy: LoopbackPolicy? = nil,
-    capabilities: APIHealth.Capabilities = .init(backgroundRemoval: false, similarityDetection: false)
+    capabilities: APIHealth.Capabilities = .init(backgroundRemoval: false, similarityDetection: false),
+    now: @escaping @Sendable () -> Date = Date.init
 ) -> Router<BasicRequestContext> {
     let policy = policy ?? LoopbackPolicy(port: configuration.port)
     let router = Router(context: BasicRequestContext.self)
@@ -40,7 +41,7 @@ public func makeRouter(
         // 静态文件在安全中间件之内处理，同样经过 Host 校验并附加安全响应头。
         router.add(middleware: FileMiddleware(webRoot.path, searchForIndexHtml: true))
     }
-    APIRoutes(store: store, catalog: CatalogService(store: store), capabilities: capabilities).register(on: router)
+    APIRoutes(store: store, catalog: CatalogService(store: store), capabilities: capabilities, now: now).register(on: router)
     if let webRoot = configuration.webRoot {
         registerSinglePageFallback(on: router, webRoot: webRoot)
     }

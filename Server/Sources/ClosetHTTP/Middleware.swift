@@ -2,6 +2,7 @@ import Foundation
 import HTTPTypes
 import Hummingbird
 import Logging
+import ClosetServices
 
 /// 本机访问策略：只接受回环地址的 Host 与同源请求。
 public struct LoopbackPolicy: Sendable {
@@ -90,6 +91,12 @@ public struct APIErrorMiddleware<Context: RequestContext>: RouterMiddleware {
             return try await next(request, context)
         } catch let error as APIError {
             return APIError.jsonResponse(status: error.status, code: error.code, message: error.message)
+        } catch let error as ServiceError {
+            switch error {
+            case .notFound(let message): return APIError.jsonResponse(status: .notFound, code: "not_found", message: message)
+            case .conflict(let message): return APIError.jsonResponse(status: .conflict, code: "conflict", message: message)
+            case .invalid(let message): return APIError.jsonResponse(status: .badRequest, code: "invalid_request", message: message)
+            }
         } catch let error as HTTPResponseError {
             let (code, message) = Self.describe(error.status)
             return APIError.jsonResponse(status: error.status, code: code, message: message)

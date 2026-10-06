@@ -56,6 +56,8 @@ public struct APIItem: Codable, Sendable, Equatable, ResponseEncodable {
     public var status: String
     public var isWaterproof: Bool
     public var laundryEntryDate: Date?
+    /// 在洗衣袋中超过阈值，规则来自共享核心 `WardrobeRules`。
+    public var laundryRetentionWarning: Bool
     public var dominantColor: APIColor
     public var secondaryColor: APIColor?
     public var dominantColorCategory: String
@@ -69,7 +71,7 @@ public struct APIItem: Codable, Sendable, Equatable, ResponseEncodable {
     public var updatedAt: Date
     public var images: APIItemImages
 
-    public init(_ item: StoredItem) {
+    public init(_ item: StoredItem, now: Date = Date()) {
         id = item.id
         name = item.name
         title = ItemDefaults.displayTitle(name: item.name, category: item.category)
@@ -79,6 +81,8 @@ public struct APIItem: Codable, Sendable, Equatable, ResponseEncodable {
         status = item.status.rawValue
         isWaterproof = item.isWaterproof
         laundryEntryDate = item.laundryEntryDate
+        laundryRetentionWarning = item.status == .inLaundry
+            && WardrobeRules.isLaundryRetentionWarning(entryDate: item.laundryEntryDate, now: now)
         dominantColor = APIColor(item.dominantColor)
         secondaryColor = item.secondaryColor.map(APIColor.init)
         dominantColorCategory = item.dominantColorCategory.rawValue
@@ -146,7 +150,7 @@ public struct APIWearRecord: Codable, Sendable, ResponseEncodable {
         date = resolved.record.date
         isActive = resolved.record.isActive
         outfitId = resolved.record.outfitID
-        items = resolved.items.map(APIItem.init)
+        items = resolved.items.map { APIItem($0) }
         notes = resolved.record.notes
         createdAt = resolved.record.createdAt
     }

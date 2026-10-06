@@ -47,6 +47,20 @@ public struct CatalogService: Sendable {
         }
     }
 
+    public func resolve(_ record: StoredWearRecord) async throws -> ResolvedWearRecord {
+        try await store.read { session in
+            let items = try Self.itemMap(session, ids: record.itemIDs)
+            return ResolvedWearRecord(record: record, items: record.itemIDs.compactMap { items[$0] })
+        }
+    }
+
+    public func resolve(_ outfit: StoredOutfit) async throws -> ResolvedOutfit {
+        try await store.read { session in
+            let items = try Self.itemMap(session, ids: outfit.itemIDs)
+            return ResolvedOutfit(outfit: outfit, items: outfit.itemIDs.compactMap { items[$0] })
+        }
+    }
+
     public func counts() async throws -> StoreCounts {
         try await store.read { try $0.counts() }
     }

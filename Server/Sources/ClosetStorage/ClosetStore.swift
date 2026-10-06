@@ -35,6 +35,7 @@ public actor ClosetStore {
     }
 
     /// 在一个事务中执行写操作；闭包抛错时整体回滚。
+    @discardableResult
     public func transaction<T: Sendable>(_ body: @Sendable (StoreSession) throws -> T) throws -> T {
         try db.transaction { try body(StoreSession(db: db)) }
     }
