@@ -25,6 +25,8 @@ iOS App 保持可编译、可运行，与 Web 版共用 `ClosetManager/Core` 中
 | D4 | 保留原图，导入数据不改变含义 | 迁移要求不得改变现有数据含义 | 已采用；原图元数据如何处理仍待决定 |
 | D5 | 未勾选场景的单品如何处理 | Repository 中没有依据 | 待决定。当前行为已由测试 `testItemsWithoutScenariosAreExcluded_AuditH01` 固定 |
 | D6 | 启动方式 | 终端命令是任何形态都需要的最小形态 | 先实现终端命令；其它形态待决定 |
+| D7 | 服务端持久化使用 SQLite 显式 schema，不复用 SwiftData | SwiftData 无法在 Linux 上编译测试；它没有 CHECK、外键、部分唯一索引这类约束，也没有可审查的迁移脚本（审计 H-05）。SwiftData 本身就以 SQLite 为底层存储，这里只是改为直接使用，不属于更换技术栈 | 已采用 |
+| D8 | 服务端导入比 App 更严格 | App 遇到无法识别的取值会静默替换为默认值（审计 M-02），这会改变数据含义。服务端改为报错并拒绝导入；能在不改变含义的前提下处理的问题记为警告 | 已采用 |
 
 ## 3. 共享核心的组织方式
 
@@ -46,7 +48,28 @@ Core 只允许依赖 Foundation。SwiftUI 桥接放在 App 内，例如 `ClosetM
 | R2 | 行为缺陷修复单独成轨，不混入迁移阶段 | 迁移要求保持现有功能与数据含义。审计报告中的 H-01、H-02、H-03、M-01、M-04、M-05、M-07 等问题保持现状，已有特征测试的会在修复时显式改变断言。修复放在共享核心中进行，App 与 Web 同时生效 |
 | R3 | 审计报告 Phase 0 中的「测试与 CI」提前到第一阶段完成 | 后续每一步都需要回归基线 |
 
-## 5. 阶段进度
+## 5. 服务端结构
+
+```text
+Server/Sources/
+  CSQLite          Linux 上的系统 SQLite 模块映射
+  ClosetStorage    SQLite 封装、迁移、存储 actor、按内容寻址的图片存储
+  ClosetServices   应用服务：备份导入、只读查询
+  ClosetHTTP       Hummingbird 路由、API 模型、安全中间件
+  ClosetServer     命令行入口 closet-server
+```
+
+依赖方向为 ClosetServer → ClosetHTTP → ClosetServices → ClosetStorage → ClosetCore。
+
+开发时的常用命令如下，`--data-dir` 省略时使用用户的应用数据目录。
+
+```bash
+swift run closet-server import 备份.wardrobe --data-dir ./data            # 只做预检
+swift run closet-server import 备份.wardrobe --data-dir ./data --apply    # 写入
+swift run closet-server serve --data-dir ./data --port 8765
+```
+
+## 6. 阶段进度
 
 ### 第一阶段 Architecture preparation
 
@@ -58,3 +81,16 @@ Core 只允许依赖 Foundation。SwiftUI 桥接放在 App 内，例如 `ClosetM
 | `refactor(core): share outfit generation and analytics through ClosetCore` | 泛型生成引擎与统计、App 侧适配、引擎测试 |
 
 验证结果。Linux 上 `swift test` 共 43 个测试全部通过。替代验证环境中，重构前后生成器在 19,200 次调用下输出逐项一致，统计输出一致，视图层调用表达式通过类型检查。iOS 工程在 Apple 工具链上的编译尚未验证，原因见 R1。
+
+### 第二阶段 Backend/API boundary
+
+| 提交 | 内容 |
+|---|---|
+| `refactor(core): share the .wardrobe backup format and item defaults` | 备份格式与默认值规则移入共享核心，App 的 `BackupService` 与 `ClothingItem` 改为引用它们 |
+| `feat(server): add SQLite storage layer with migrations and media store` | 存储层 |
+| `feat(server): add backup importer and read-only catalog service` | 导入器与只读查询 |
+| `feat(server): add loopback-only HTTP API and closet-server CLI` | 只读 API、安全中间件、命令行入口 |
+
+验证结果。Linux 上 `swift test` 共 98 个测试全部通过。替代验证环境中，App 的备份导出在改动前后语义一致，导出后覆盖导入再导出内容不变；App 导出的文件被服务端导入器完整读取。真实运行时，伪造 Host 头的请求返回 403，缺少客户端头的写请求返回 403，非回环地址无法连接。
+
+遗留问题如下。导入时整个备份文件会读入内存，与 App 相同，体积很大的备份需要改为流式解析。Linux 上没有 Vision，服务端在 Linux 运行时不具备抠图与相似检测能力，`/api/v1/health` 中的 `capabilities` 如实返回。HEIC 原图在多数浏览器中无法显示，转码放在第五阶段。目前 API 只读。
