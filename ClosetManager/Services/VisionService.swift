@@ -105,51 +105,13 @@ actor VisionService {
     ///
     /// 建议传入已抠图（透明背景）的数据，背景透明像素会被跳过，从而只统计衣物本体颜色。
     /// 失败时返回中性灰主色、无辅色，绝不抛错（取色非关键路径）。
+    /// 统计规则在共享核心 `ColorExtraction` 中，这里只负责解码与缩放采样。
     func extractColors(from imageData: Data) async -> (dominant: StoredColor, secondary: StoredColor?) {
-        let fallback = StoredColor(red: 0.5, green: 0.5, blue: 0.5)
         guard let cgImage = Self.makeCGImage(from: imageData),
-              let pixels = Self.sampleRGBA(cgImage, size: 48) else {
-            return (fallback, nil)
+              let pixels = Self.sampleRGBA(cgImage, size: ColorExtraction.sampleSize) else {
+            return (ColorExtraction.fallback, nil)
         }
-
-        // 将像素量化到 6×6×6 的颜色桶并累计均值，统计占比。
-        let levels = 6
-        var buckets: [Int: (count: Int, r: Double, g: Double, b: Double)] = [:]
-        var index = 0
-        while index < pixels.count {
-            let r = pixels[index], g = pixels[index + 1], b = pixels[index + 2], a = pixels[index + 3]
-            index += 4
-            if a < 32 { continue } // 跳过透明背景
-            let rk = Int(r) * levels / 256
-            let gk = Int(g) * levels / 256
-            let bk = Int(b) * levels / 256
-            let key = (rk * levels + gk) * levels + bk
-            var entry = buckets[key] ?? (count: 0, r: 0, g: 0, b: 0)
-            entry.count += 1
-            entry.r += Double(r); entry.g += Double(g); entry.b += Double(b)
-            buckets[key] = entry
-        }
-
-        guard !buckets.isEmpty else { return (fallback, nil) }
-        let sorted = buckets.values.sorted { $0.count > $1.count }
-
-        func averageColor(_ e: (count: Int, r: Double, g: Double, b: Double)) -> StoredColor {
-            StoredColor(
-                red: e.r / Double(e.count) / 255,
-                green: e.g / Double(e.count) / 255,
-                blue: e.b / Double(e.count) / 255
-            )
-        }
-
-        let dominant = averageColor(sorted[0])
-        // 辅色：第一个与主色 RGB 曼哈顿距离足够大的桶。
-        var secondary: StoredColor?
-        for entry in sorted.dropFirst() {
-            let c = averageColor(entry)
-            let distance = abs(c.red - dominant.red) + abs(c.green - dominant.green) + abs(c.blue - dominant.blue)
-            if distance > 0.25 { secondary = c; break }
-        }
-        return (dominant, secondary)
+        return ColorExtraction.extract(rgba: pixels)
     }
 
     // MARK: - 跨平台图像工具（基于 ImageIO / CoreGraphics，无 UIKit / AppKit 依赖）

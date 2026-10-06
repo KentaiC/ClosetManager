@@ -20,13 +20,15 @@ actor DuplicationDetectorService {
     }
 
     /// 找出相似组，返回成组的单品 id（每组 ≥ 2 件）。
+    ///
+    /// 分组规则与阈值在共享核心 `SimilarityGrouping` 中，这里只负责计算特征指纹与特征距离。
     /// - Parameters:
     ///   - featureThreshold: 特征距离阈值（越小越严格）。VNFeaturePrint 距离无固定上界，需用真实衣橱微调。
     ///   - colorThreshold: 主色 RGB 曼哈顿距离阈值（0...3，越小越严格）。
     func findSimilarGroups(
         _ inputs: [ItemFingerprintInput],
-        featureThreshold: Float = 0.6,
-        colorThreshold: Double = 0.30
+        featureThreshold: Float = SimilarityGrouping.featureThreshold,
+        colorThreshold: Double = SimilarityGrouping.colorThreshold
     ) async -> [[UUID]] {
         // 1. 逐件计算特征指纹与主色。
         var prints: [UUID: VNFeaturePrintObservation] = [:]
@@ -38,41 +40,22 @@ actor DuplicationDetectorService {
             }
         }
 
-        // 2. 并查集初始化。
-        var parent: [UUID: UUID] = [:]
-        for input in inputs { parent[input.id] = input.id }
-        func find(_ x: UUID) -> UUID {
-            var root = x
-            while parent[root] != root { root = parent[root]! }
-            return root
-        }
-        func union(_ a: UUID, _ b: UUID) { parent[find(a)] = find(b) }
-
-        // 3. 两两比较（O(n²)，手动工具可接受）。
-        let ids = inputs.map(\.id)
-        for i in 0..<ids.count {
-            for j in (i + 1)..<ids.count {
-                let a = ids[i], b = ids[j]
-                guard let fa = prints[a], let fb = prints[b],
-                      let ca = colors[a], let cb = colors[b] else { continue }
-                var distance: Float = 0
-                do {
-                    try fa.computeDistance(&distance, to: fb)
-                } catch {
-                    continue
-                }
-                if distance < featureThreshold && Self.colorDistance(ca, cb) < colorThreshold {
-                    union(a, b)
-                }
+        // 2. 两两比较并聚组（O(n²)，手动工具可接受）。
+        return SimilarityGrouping.groups(
+            ids: inputs.map(\.id),
+            colors: colors,
+            featureThreshold: featureThreshold,
+            colorThreshold: colorThreshold
+        ) { a, b in
+            guard let fa = prints[a], let fb = prints[b] else { return nil }
+            var distance: Float = 0
+            do {
+                try fa.computeDistance(&distance, to: fb)
+            } catch {
+                return nil
             }
+            return distance
         }
-
-        // 4. 按根聚组，保留 ≥ 2 件的组。
-        var groups: [UUID: [UUID]] = [:]
-        for id in ids {
-            groups[find(id), default: []].append(id)
-        }
-        return groups.values.filter { $0.count >= 2 }.map { $0 }
     }
 
     // MARK: - 工具
@@ -93,10 +76,5 @@ actor DuplicationDetectorService {
     private static func makeCGImage(from data: Data) -> CGImage? {
         guard let source = CGImageSourceCreateWithData(data as CFData, nil) else { return nil }
         return CGImageSourceCreateImageAtIndex(source, 0, nil)
-    }
-
-    /// 主色 RGB 曼哈顿距离。
-    private static func colorDistance(_ a: StoredColor, _ b: StoredColor) -> Double {
-        abs(a.red - b.red) + abs(a.green - b.green) + abs(a.blue - b.blue)
     }
 }
