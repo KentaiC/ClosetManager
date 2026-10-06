@@ -8,7 +8,8 @@ import PackageDescription
 // SwiftPM 把同一批文件编译成独立的 ClosetCore 模块，两边只有一份源码。
 //
 // 服务端各层位于 `Server/Sources`：
-// ClosetStorage  SQLite 数据库与按内容寻址的图片存储
+// ClosetStorage   SQLite 数据库与按内容寻址的图片存储
+// ClosetServices  应用服务：备份导入、只读查询，后续承载各项业务用例
 let package = Package(
     name: "ClosetManager",
     platforms: [.macOS(.v14), .iOS(.v17)],
@@ -41,6 +42,11 @@ let package = Package(
             ],
             path: "Server/Sources/ClosetStorage"
         ),
+        .target(
+            name: "ClosetServices",
+            dependencies: ["ClosetCore", "ClosetStorage"],
+            path: "Server/Sources/ClosetServices"
+        ),
         .testTarget(
             name: "ClosetCoreTests",
             dependencies: ["ClosetCore"],
@@ -50,6 +56,11 @@ let package = Package(
             name: "ClosetStorageTests",
             dependencies: ["ClosetStorage"],
             path: "Tests/ClosetStorageTests"
+        ),
+        .testTarget(
+            name: "ClosetServicesTests",
+            dependencies: ["ClosetServices"],
+            path: "Tests/ClosetServicesTests"
         ),
     ]
 )

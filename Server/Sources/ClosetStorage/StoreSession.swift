@@ -20,6 +20,13 @@ public struct StoreCounts: Sendable, Equatable, Codable {
     public var outfits: Int
     public var wearRecords: Int
     public var media: Int
+
+    public init(items: Int, outfits: Int, wearRecords: Int, media: Int) {
+        self.items = items
+        self.outfits = outfits
+        self.wearRecords = wearRecords
+        self.media = media
+    }
 }
 
 /// 已存在记录的 id 集合。
@@ -27,6 +34,12 @@ public struct ExistingIDs: Sendable {
     public var items: Set<UUID>
     public var outfits: Set<UUID>
     public var wearRecords: Set<UUID>
+
+    public init(items: Set<UUID> = [], outfits: Set<UUID> = [], wearRecords: Set<UUID> = []) {
+        self.items = items
+        self.outfits = outfits
+        self.wearRecords = wearRecords
+    }
 }
 
 /// 一次数据库会话：只在 `ClosetStore.read` 或 `ClosetStore.transaction` 的闭包内有效。
