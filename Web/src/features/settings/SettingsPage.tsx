@@ -7,6 +7,7 @@ import { ErrorPanel, Loading } from '../../app/Feedback'
 import { useMeta } from '../../app/meta'
 import { Link } from '../../app/router'
 import { useToast } from '../../app/toast'
+import { BackupSection } from './BackupSection'
 
 function ProfileForm({ initial }: { initial: ApiProfile }) {
   const meta = useMeta()
@@ -111,7 +112,7 @@ function AppearanceForm() {
   )
 }
 
-/** 设置页，对应 App 的 SettingsView。数据备份与「清理相似衣物」在阶段 5 接入。 */
+/** 设置页，对应 App 的 SettingsView：个人资料、外观、工具与数据冷备份。 */
 export function SettingsPage() {
   const profile = useResource(() => api.profile(), [])
   return (
@@ -123,8 +124,10 @@ export function SettingsPage() {
         <legend>工具</legend>
         <ul className="link-list">
           <li><Link to="/travel">差旅打包</Link></li>
+          <li><Link to="/similar">清理相似衣物</Link></li>
         </ul>
       </fieldset>
+      <BackupSection />
     </section>
   )
 }

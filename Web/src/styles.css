@@ -269,3 +269,7 @@ fieldset.form legend, .form fieldset legend { font-weight: 600; padding: 0 6px; 
 .drop-zone.active { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 8%, var(--surface)); }
 .batch-progress { display: flex; flex-direction: column; gap: 6px; margin-bottom: 12px; font-weight: 600; }
 .batch-progress progress { width: 100%; accent-color: var(--accent); }
+.report-lines { margin: 8px 0; padding-left: 1.2em; }
+.similar-item { display: flex; flex-direction: column; align-items: center; gap: 6px; width: 96px; flex: 0 0 96px; }
+.similar-item .thumb { width: 96px; flex-basis: 96px; }
+.similar-name { font-size: 0.8rem; max-width: 96px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

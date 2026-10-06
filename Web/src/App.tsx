@@ -10,6 +10,7 @@ import { AnalyticsPage } from './features/analytics/AnalyticsPage'
 import { CalendarPage } from './features/calendar/CalendarPage'
 import { BatchImportPage } from './features/items/BatchImportPage'
 import { NewItemPage } from './features/items/NewItemPage'
+import { SimilarItemsPage } from './features/items/SimilarItemsPage'
 import { LaundryPage } from './features/laundry/LaundryPage'
 import { OutfitsPage } from './features/outfits/OutfitsPage'
 import { ComingSoon } from './features/placeholder/ComingSoon'
@@ -29,7 +30,7 @@ const TABS: { to: string; label: string; matches: Route['name'][] }[] = [
 ]
 
 /** 从设置页进入的页面，导航时高亮「设置」。 */
-const SETTINGS_ROUTES: Route['name'][] = ['settings', 'travel']
+const SETTINGS_ROUTES: Route['name'][] = ['settings', 'travel', 'similar']
 
 function Page({ route }: { route: Route }) {
   switch (route.name) {
@@ -55,6 +56,8 @@ function Page({ route }: { route: Route }) {
       return <NewItemPage />
     case 'batchImport':
       return <BatchImportPage />
+    case 'similar':
+      return <SimilarItemsPage />
     case 'notFound':
       return <ComingSoon title="页面不存在" />
   }

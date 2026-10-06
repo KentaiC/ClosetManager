@@ -6,6 +6,7 @@ export type Route =
   | { name: 'item'; id: string }
   | { name: 'newItem' }
   | { name: 'batchImport' }
+  | { name: 'similar' }
   | { name: 'laundry' }
   | { name: 'outfits' }
   | { name: 'calendar' }
@@ -38,6 +39,8 @@ export function parseRoute(pathname: string): Route {
       return { name: 'newItem' }
     case '/items/batch':
       return { name: 'batchImport' }
+    case '/similar':
+      return { name: 'similar' }
   }
   const item = /^\/items\/([0-9A-Fa-f-]{36})$/.exec(path)
   if (item?.[1]) return { name: 'item', id: item[1] }
