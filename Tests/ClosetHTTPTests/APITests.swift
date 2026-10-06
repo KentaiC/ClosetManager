@@ -216,7 +216,7 @@ final class APITests: XCTestCase {
             let sameOrigin = try await http.execute(uri: "/api/v1/items", method: .post,
                                                     headers: [client: "web", HTTPField.Name("Origin")!: "http://127.0.0.1:8765",
                                                               HTTPField.Name("Sec-Fetch-Site")!: "same-origin"])
-            XCTAssertNotEqual(sameOrigin.status, .forbidden, "passes the guard; no write route exists yet")
+            XCTAssertEqual(sameOrigin.status, .badRequest, "passes the guard and reaches item creation, which rejects the empty body")
         }
     }
 
