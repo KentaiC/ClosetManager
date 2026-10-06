@@ -26,6 +26,7 @@ struct APIRoutes: Sendable {
         api.get("wear-records/active", use: activeWearRecord)
         WriteRoutes(store: store, catalog: catalog, now: now).register(on: api)
         ImageRoutes(images: images, now: now).register(on: api)
+        BackupRoutes(store: store, now: now).register(on: api)
     }
 
     // MARK: - 处理函数
