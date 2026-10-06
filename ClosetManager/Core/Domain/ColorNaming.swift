@@ -4,7 +4,7 @@ import Foundation
 ///
 /// 比 `ColorCategory`（粗粒度色桶，用于看板聚合）更细，用于卡片/编辑页展示。
 /// 做法：维护一张「具名参考色」表，取与目标色 RGB 距离最近者。
-enum ColorNaming {
+public enum ColorNaming {
     /// (中文名, 参考 RGB 0...255)
     private static let table: [(name: String, r: Double, g: Double, b: Double)] = [
         ("黑色", 20, 20, 22),
@@ -41,7 +41,7 @@ enum ColorNaming {
     ]
 
     /// 取与给定颜色最接近的具名颜色。
-    static func name(for color: StoredColor) -> String {
+    public static func name(for color: StoredColor) -> String {
         let r = color.red * 255, g = color.green * 255, b = color.blue * 255
         var best = table[0]
         var bestDistance = Double.greatestFiniteMagnitude
@@ -60,5 +60,5 @@ enum ColorNaming {
 
 extension StoredColor {
     /// 精细中文色名（如「藏青」「酒红」）。
-    var refinedColorName: String { ColorNaming.name(for: self) }
+    public var refinedColorName: String { ColorNaming.name(for: self) }
 }

@@ -4,7 +4,7 @@ import Foundation
 ///
 /// 顺序即由「冷」到「热」，`allCases` 可直接用于有序展示。
 /// 适用季节由该标签自动推导（见 `seasons`），用户可在此基础上手动覆盖。
-enum WarmthLevel: String, Codable, CaseIterable, Identifiable {
+public enum WarmthLevel: String, Codable, CaseIterable, Identifiable, Sendable {
     case frigid   // 严寒
     case cold     // 寒冷
     case cool     // 凉爽
@@ -12,9 +12,9 @@ enum WarmthLevel: String, Codable, CaseIterable, Identifiable {
     case warm     // 暖和
     case hot      // 炎热
 
-    var id: String { rawValue }
+    public var id: String { rawValue }
 
-    var displayName: String {
+    public var displayName: String {
         switch self {
         case .frigid: return "严寒"
         case .cold:   return "寒冷"
@@ -26,7 +26,7 @@ enum WarmthLevel: String, Codable, CaseIterable, Identifiable {
     }
 
     /// 代表性图标（温度计由冷到热）。
-    var symbolName: String {
+    public var symbolName: String {
         switch self {
         case .frigid: return "thermometer.snowflake"
         case .cold:   return "thermometer.low"
@@ -38,7 +38,7 @@ enum WarmthLevel: String, Codable, CaseIterable, Identifiable {
     }
 
     /// 该保暖标签对应的季节（用于自动推导单品的适用季节）。
-    var seasons: Set<Season> {
+    public var seasons: Set<Season> {
         switch self {
         case .frigid: return [.winter]
         case .cold:   return [.autumn, .winter]
@@ -54,7 +54,7 @@ enum WarmthLevel: String, Codable, CaseIterable, Identifiable {
 
 extension WarmthLevel {
     /// 由单品保暖度（1~100）映射到 6 档（用于季节推导与展示）。
-    static func from(score: Int) -> WarmthLevel {
+    public static func from(score: Int) -> WarmthLevel {
         switch score {
         case ..<17:  return .hot
         case 17..<34: return .warm
@@ -66,7 +66,7 @@ extension WarmthLevel {
     }
 
     /// 该档位的代表保暖度（滑条默认值用）。
-    var representativeScore: Int {
+    public var representativeScore: Int {
         switch self {
         case .hot: return 12
         case .warm: return 25
@@ -79,7 +79,7 @@ extension WarmthLevel {
 
     /// 当前环境（当天天气）期望的「躯干层保暖度总和」目标。
     /// 数值越冷越高，叠穿算法据此堆叠层数。
-    var torsoBudget: Int {
+    public var torsoBudget: Int {
         switch self {
         case .hot: return 22
         case .warm: return 40
@@ -92,7 +92,7 @@ extension WarmthLevel {
 
     /// 「气温向下兼容」：当前环境允许的单件最大保暖度。
     /// 炎热天禁止出现高保暖单品（如羽绒），但低保暖单品可在严寒作为最内层打底。
-    var maxSingleGarmentWarmth: Int {
+    public var maxSingleGarmentWarmth: Int {
         switch self {
         case .hot: return 38
         case .warm: return 58

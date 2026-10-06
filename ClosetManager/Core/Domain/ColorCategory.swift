@@ -5,14 +5,14 @@ import Foundation
 /// CoreImage 提取出的主色是连续的 RGB 值，无法直接做占比聚合；
 /// 因此将精确主色映射到有限的颜色桶，落库到 `ClothingItem.dominantColorCategory`，
 /// 看板侧即可直接按枚举分组统计。
-enum ColorCategory: String, Codable, CaseIterable, Identifiable {
+public enum ColorCategory: String, Codable, CaseIterable, Identifiable, Sendable {
     case black, white, gray, beige, brown
     case red, orange, yellow, green, cyan, blue, purple, pink
     case multicolor   // 多色 / 难以归类
 
-    var id: String { rawValue }
+    public var id: String { rawValue }
 
-    var displayName: String {
+    public var displayName: String {
         switch self {
         case .black:      return "黑色"
         case .white:      return "白色"
@@ -39,7 +39,7 @@ extension ColorCategory {
     /// 1. 低饱和度视为无彩色系，按明度区分 黑 / 灰 / 白；
     /// 2. 暖色相区间内，低明度归为棕色、低饱和归为米色；
     /// 3. 其余按色相落入对应彩色桶。
-    static func classify(_ color: StoredColor) -> ColorCategory {
+    public static func classify(_ color: StoredColor) -> ColorCategory {
         let (hue, saturation, brightness) = color.hsb
 
         // 1. 无彩色系

@@ -35,3 +35,27 @@ jobs:
             -configuration Debug \
             CODE_SIGNING_ALLOWED=NO \
             build | tail -200
+
+  swift-package-linux:
+    name: Swift package tests (Linux)
+    runs-on: ubuntu-latest
+    container: swift:6.1-noble
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run swift test
+        run: swift test
+
+  swift-package-macos:
+    name: Swift package tests (macOS)
+    runs-on: macos-15
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: Select newest stable Xcode
+        run: |
+          XCODE=$(ls -d /Applications/Xcode_*.app | grep -vi beta | sort -V | tail -1)
+          sudo xcode-select -s "$XCODE"
+          swift --version
+      - name: Run swift test
+        run: swift test

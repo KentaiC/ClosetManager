@@ -3,7 +3,7 @@ import Foundation
 /// 二级子类（细分种类）。每个子类归属于唯一的顶层 `Category`。
 ///
 /// 用于更精细的衣物描述，并作为「默认命名」的种类部分（如「绿色短裤」中的「短裤」）。
-enum Subtype: String, Codable, CaseIterable, Identifiable {
+public enum Subtype: String, Codable, CaseIterable, Identifiable, Sendable {
     // 外套 Outerwear
     case jacket            // 夹克
     case trenchCoat        // 风衣
@@ -59,10 +59,10 @@ enum Subtype: String, Codable, CaseIterable, Identifiable {
     case kneeSocks         // 长筒袜
     case athleticSocks     // 运动袜
 
-    var id: String { rawValue }
+    public var id: String { rawValue }
 
     /// 所属顶层分类。
-    var category: Category {
+    public var category: Category {
         switch self {
         case .jacket, .trenchCoat, .overcoat, .downJacket, .paddedJacket,
              .leatherJacket, .blazer, .cardigan, .vest:
@@ -81,7 +81,7 @@ enum Subtype: String, Codable, CaseIterable, Identifiable {
     }
 
     /// 中文名称（用于 UI 展示与默认命名）。
-    var displayName: String {
+    public var displayName: String {
         switch self {
         case .jacket:        return "夹克"
         case .trenchCoat:    return "风衣"
