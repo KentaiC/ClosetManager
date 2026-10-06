@@ -1,0 +1,90 @@
+#!/usr/bin/env bash
+# Closet Manager 本地 Web 版的启动脚本。
+#
+#   scripts/closet [start] [serve 的参数]   需要时构建前端与服务端，然后启动服务并打开浏览器
+#   scripts/closet import 备份.wardrobe [--mode merge|overwrite] [--apply]
+#   scripts/closet help
+#
+# 环境变量：
+#   CLOSET_SERVER_BIN   运行 closet-server 的命令前缀。设置后不再构建服务端，例如由容器运行时使用
+#   CLOSET_SKIP_WEB_BUILD=1   不检查、不构建前端
+#   SWIFT               swift 命令，默认 swift
+#
+# 只使用 macOS 自带的 bash 3.2 也支持的写法。
+set -euo pipefail
+
+REPO="$(cd "$(dirname "$0")/.." && pwd)"
+WEB="$REPO/Web"
+SWIFT="${SWIFT:-swift}"
+
+say() { printf '%s\n' "$*"; }
+fail() { printf '错误：%s\n' "$*" >&2; exit 1; }
+
+need() {
+  command -v "$1" >/dev/null 2>&1 || fail "$2"
+}
+
+# 前端构建产物缺失或比源文件旧时重新构建。
+build_web() {
+  if [ "${CLOSET_SKIP_WEB_BUILD:-}" = "1" ]; then return; fi
+  local index="$WEB/dist/index.html"
+  local stale=""
+  if [ ! -f "$index" ]; then
+    stale="尚未构建"
+  elif [ -n "$(find "$WEB/src" "$WEB/index.html" "$WEB/package.json" "$WEB/package-lock.json" "$WEB/vite.config.ts" -newer "$index" -print 2>/dev/null | head -n 1)" ]; then
+    stale="源文件有更新"
+  fi
+  [ -z "$stale" ] && return
+  need npm "需要 Node.js 与 npm 来构建前端，请先安装 Node.js 22。"
+  say "构建前端（$stale）…"
+  if [ ! -d "$WEB/node_modules" ] || [ "$WEB/package-lock.json" -nt "$WEB/node_modules/.package-lock.json" ]; then
+    (cd "$WEB" && npm ci --no-audit --no-fund)
+  fi
+  (cd "$WEB" && npm run build)
+}
+
+# 构建 release 版服务端，并把可执行文件路径记在 SERVER_PATH。swift build 是增量的，没有改动时很快。
+SERVER_PATH=""
+build_server() {
+  if [ -n "${CLOSET_SERVER_BIN:-}" ]; then return; fi
+  need "$SWIFT" "需要 Swift 工具链来构建服务端。在 macOS 上安装 Xcode 或命令行工具即可。"
+  say "构建服务端…"
+  (cd "$REPO" && "$SWIFT" build -c release --product closet-server)
+  SERVER_PATH="$(cd "$REPO" && "$SWIFT" build -c release --show-bin-path)/closet-server"
+}
+
+# 运行 closet-server。路径中可以有空格；CLOSET_SERVER_BIN 是命令前缀，按空格拆分。
+run_server() {
+  if [ -n "${CLOSET_SERVER_BIN:-}" ]; then
+    # shellcheck disable=SC2086
+    exec $CLOSET_SERVER_BIN "$@"
+  fi
+  exec "$SERVER_PATH" "$@"
+}
+
+command="${1:-start}"
+case "$command" in
+  start)
+    if [ $# -gt 0 ]; then shift; fi
+    build_web
+    build_server
+    run_server serve --web-root "$WEB/dist" --open "$@"
+    ;;
+  import)
+    shift
+    build_server
+    run_server import "$@"
+    ;;
+  help|-h|--help)
+    sed -n '2,13p' "$0" | sed 's/^# \{0,1\}//'
+    ;;
+  -*)
+    # 直接带 serve 参数启动，例如 scripts/closet --port 9000
+    build_web
+    build_server
+    run_server serve --web-root "$WEB/dist" --open "$@"
+    ;;
+  *)
+    fail "未知命令 $command。运行 scripts/closet help 查看用法。"
+    ;;
+esac
