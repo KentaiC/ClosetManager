@@ -1,9 +1,13 @@
-import type { ReactNode } from 'react'
+import { useState, type ReactNode } from 'react'
 import { api } from '../../api/client'
 import { useResource } from '../../api/useResource'
+import { ConfirmDialog } from '../../app/Dialog'
 import { EmptyState, ErrorPanel, Loading } from '../../app/Feedback'
+import { useDataVersion } from '../../app/dataVersion'
 import { useMeta } from '../../app/meta'
-import { Link } from '../../app/router'
+import { Link, navigate } from '../../app/router'
+import { useToast } from '../../app/toast'
+import { ItemEditor } from './ItemEditor'
 import { ItemImage } from './ItemImage'
 
 function Field({ label, children }: { label: string; children: ReactNode }) {
@@ -19,10 +23,26 @@ function formatDate(value: string | undefined): string {
   return value ? new Date(value).toLocaleString('zh-CN') : '无'
 }
 
-/** 单品详情（只读）。编辑功能在后续阶段接入。 */
+/** 单品详情，可编辑与删除（对应 App 的 ItemEditorView 与衣橱长按删除）。 */
 export function ItemDetailPage({ id }: { id: string }) {
   const meta = useMeta()
-  const item = useResource(() => api.item(id), [id])
+  const toast = useToast()
+  const { version, invalidate } = useDataVersion()
+  const item = useResource(() => api.item(id), [id, version])
+  const [editing, setEditing] = useState(false)
+  const [confirmingDelete, setConfirmingDelete] = useState(false)
+
+  async function remove() {
+    try {
+      await api.deleteItem(id)
+      invalidate()
+      toast('已删除')
+      navigate('/')
+    } catch (e) {
+      toast(e instanceof Error ? e.message : String(e))
+      setConfirmingDelete(false)
+    }
+  }
 
   if (item.error) {
     return (
@@ -44,12 +64,48 @@ export function ItemDetailPage({ id }: { id: string }) {
   const names = (kind: 'scenario' | 'season' | 'warmthLevel', values: string[]) =>
     values.length ? values.map((value) => meta.name(kind, value)).join('、') : '未设置'
 
+  if (editing) {
+    return (
+      <section className="page">
+        <h1 className="page-title">编辑单品</h1>
+        <ItemEditor
+          item={data}
+          onCancel={() => setEditing(false)}
+          onSaved={() => {
+            setEditing(false)
+            invalidate()
+            toast('已保存')
+          }}
+        />
+      </section>
+    )
+  }
+
   return (
     <section className="page">
       <Link to="/" className="back-link">
         返回衣橱
       </Link>
-      <h1 className="page-title">{data.title}</h1>
+      <div className="page-heading">
+        <h1 className="page-title">{data.title}</h1>
+        <span className="row-actions">
+          <button type="button" className="button" onClick={() => setEditing(true)}>
+            编辑
+          </button>
+          <button type="button" className="button button-danger" onClick={() => setConfirmingDelete(true)}>
+            删除
+          </button>
+        </span>
+      </div>
+      {confirmingDelete && (
+        <ConfirmDialog
+          title={`删除「${data.title}」？`}
+          message="删除后无法恢复。它在收藏穿搭与穿着记录中的位置会被移除，穿搭与记录本身保留。"
+          confirmLabel="删除"
+          onConfirm={remove}
+          onCancel={() => setConfirmingDelete(false)}
+        />
+      )}
       <div className="detail">
         <ItemImage item={data} className="detail-image" />
         <dl className="fields">

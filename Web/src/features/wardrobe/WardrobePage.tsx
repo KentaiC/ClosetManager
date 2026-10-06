@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { api } from '../../api/client'
 import { useResource } from '../../api/useResource'
 import { EmptyState, ErrorPanel, Loading } from '../../app/Feedback'
+import { useDataVersion } from '../../app/dataVersion'
 import { useMeta } from '../../app/meta'
 import { loadGallerySize, saveGallerySize, type GallerySize } from '../../app/preferences'
 import { ActiveOutfitPanel } from './ActiveOutfitPanel'
@@ -13,7 +14,8 @@ const SIZE_LABELS: Record<GallerySize, string> = { large: '大', medium: '中', 
 /** 衣橱主页，对应 App 的 WardrobeGalleryView。 */
 export function WardrobePage() {
   const meta = useMeta()
-  const items = useResource(() => api.items(), [])
+  const { version } = useDataVersion()
+  const items = useResource(() => api.items(), [version])
   const [category, setCategory] = useState<string | undefined>(undefined)
   const [showLaundry, setShowLaundry] = useState(false)
   const [size, setSize] = useState<GallerySize>(loadGallerySize)

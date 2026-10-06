@@ -373,7 +373,9 @@
   "warmthLevels": [
     {
       "displayName": "严寒",
+      "maxScore": 100,
       "maxSingleGarmentWarmth": 100,
+      "minScore": 85,
       "representativeScore": 92,
       "seasons": [
         "winter"
@@ -383,7 +385,9 @@
     },
     {
       "displayName": "寒冷",
+      "maxScore": 84,
       "maxSingleGarmentWarmth": 100,
+      "minScore": 68,
       "representativeScore": 76,
       "seasons": [
         "autumn",
@@ -394,7 +398,9 @@
     },
     {
       "displayName": "凉爽",
+      "maxScore": 67,
       "maxSingleGarmentWarmth": 100,
+      "minScore": 51,
       "representativeScore": 59,
       "seasons": [
         "spring",
@@ -405,7 +411,9 @@
     },
     {
       "displayName": "温和",
+      "maxScore": 50,
       "maxSingleGarmentWarmth": 78,
+      "minScore": 34,
       "representativeScore": 42,
       "seasons": [
         "spring",
@@ -416,7 +424,9 @@
     },
     {
       "displayName": "暖和",
+      "maxScore": 33,
       "maxSingleGarmentWarmth": 58,
+      "minScore": 17,
       "representativeScore": 25,
       "seasons": [
         "spring",
@@ -427,7 +437,9 @@
     },
     {
       "displayName": "炎热",
+      "maxScore": 16,
       "maxSingleGarmentWarmth": 38,
+      "minScore": 1,
       "representativeScore": 12,
       "seasons": [
         "summer"

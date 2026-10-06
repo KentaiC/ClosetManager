@@ -1,0 +1,43 @@
+{
+  "items": [
+    {
+      "category": "bottom",
+      "createdAt": "2026-06-20T08:05:00Z",
+      "dominantColor": {
+        "alpha": 1,
+        "blue": 0.31,
+        "green": 0.16,
+        "hex": "#1F294F",
+        "name": "藏青",
+        "red": 0.12
+      },
+      "dominantColorCategory": "blue",
+      "id": "8B3D2E0F-4C5A-4D6B-8E7F-2A3B4C5D6E7F",
+      "images": {},
+      "isWaterproof": false,
+      "laundryEntryDate": "2026-07-01T20:15:00Z",
+      "laundryRetentionWarning": true,
+      "name": "",
+      "scenarios": [],
+      "seasons": [],
+      "secondaryColor": {
+        "alpha": 1,
+        "blue": 0.5,
+        "green": 0.5,
+        "hex": "#808080",
+        "name": "灰色",
+        "red": 0.5
+      },
+      "status": "inLaundry",
+      "subtype": "jeans",
+      "title": "下装",
+      "updatedAt": "2026-07-01T20:15:00Z",
+      "warmthLevel": "mild",
+      "warmthLevels": [
+        "cool",
+        "mild"
+      ],
+      "warmthScore": 50
+    }
+  ]
+}

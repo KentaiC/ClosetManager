@@ -27,6 +27,8 @@ export interface ApiItem {
   status: string
   isWaterproof: boolean
   laundryEntryDate?: string
+  /** 在洗衣袋中超过阈值，由服务端按共享核心规则计算。 */
+  laundryRetentionWarning: boolean
   dominantColor: ApiColor
   secondaryColor?: ApiColor
   dominantColorCategory: string
@@ -96,6 +98,8 @@ export interface ApiMeta {
   statuses: MetaOption[]
   warmthLevels: (MetaOption & {
     representativeScore: number
+    minScore: number
+    maxScore: number
     torsoBudget: number
     maxSingleGarmentWarmth: number
     seasons: string[]
@@ -105,4 +109,58 @@ export interface ApiMeta {
   outfitSources: MetaOption[]
   genders: MetaOption[]
   rules: { laundryRetentionWarningDays: number; unwornDays: number; travelPackingCap: number }
+}
+
+export interface ApiSuggestion {
+  id: string
+  members: ApiOutfitMember[]
+}
+
+export interface ApiSuggestions {
+  drafts: ApiSuggestion[]
+  missingRequired: string[]
+}
+
+export interface ApiAnalytics {
+  inventory: { category: string; count: number }[]
+  colorInventory: { colorCategory: string; count: number }[]
+  colorFrequency: { colorCategory: string; count: number }[]
+  dailyActivity: { date: string; count: number }[]
+}
+
+export interface ApiTravelPlan {
+  days: number
+  underwearCount: number
+  socksCount: number
+  showsCapHint: boolean
+  packingCap: number
+  suggestion: ApiItem[]
+  missingRequired: string[]
+}
+
+export interface ApiProfile {
+  heightCm: number
+  weightKg: number
+  age: number
+  gender: string
+}
+
+export interface ApiMember {
+  itemId: string
+  slot?: string
+}
+
+/** 编辑单品时提交的全部字段，对应服务端 ItemUpdateBody。 */
+export interface ItemUpdate {
+  name: string
+  category: string
+  subtype: string | null
+  scenarios: string[]
+  warmthScore: number
+  seasons: string[]
+  status: string
+  isWaterproof: boolean
+  brand: string
+  notes: string
+  dominantColor: { red: number; green: number; blue: number; alpha: number }
 }

@@ -1,0 +1,206 @@
+{
+  "items": [
+    {
+      "createdAt": "2026-07-01T08:00:00Z",
+      "date": "2026-07-01T08:00:00Z",
+      "id": "C3D4E5F6-A7B8-4C9D-8E0F-2A3B4C5D6E7F",
+      "isActive": true,
+      "items": [
+        {
+          "brand": "示例品牌",
+          "category": "top",
+          "createdAt": "2026-06-20T08:00:00Z",
+          "dominantColor": {
+            "alpha": 1,
+            "blue": 0.96,
+            "green": 0.96,
+            "hex": "#F5F5F5",
+            "name": "白色",
+            "red": 0.96
+          },
+          "dominantColorCategory": "white",
+          "id": "7A2C1D9E-3B4F-4C5A-9D6E-1F2A3B4C5D6E",
+          "images": {
+            "display": {
+              "byteCount": 70,
+              "displayable": true,
+              "format": "png",
+              "url": "/api/v1/items/7A2C1D9E-3B4F-4C5A-9D6E-1F2A3B4C5D6E/image?variant=display&v=cdb30873bdf16770"
+            },
+            "original": {
+              "byteCount": 22,
+              "displayable": true,
+              "format": "jpeg",
+              "url": "/api/v1/items/7A2C1D9E-3B4F-4C5A-9D6E-1F2A3B4C5D6E/image?variant=original&v=d20f6ffd523b78a8"
+            },
+            "processed": {
+              "byteCount": 70,
+              "displayable": true,
+              "format": "png",
+              "url": "/api/v1/items/7A2C1D9E-3B4F-4C5A-9D6E-1F2A3B4C5D6E/image?variant=processed&v=cdb30873bdf16770"
+            }
+          },
+          "isWaterproof": false,
+          "laundryRetentionWarning": false,
+          "name": "白色T恤",
+          "scenarios": [
+            "work",
+            "casual"
+          ],
+          "seasons": [
+            "spring",
+            "summer"
+          ],
+          "status": "inWardrobe",
+          "subtype": "tee",
+          "title": "白色T恤",
+          "updatedAt": "2026-06-21T09:30:00Z",
+          "warmthLevel": "warm",
+          "warmthLevels": [
+            "warm"
+          ],
+          "warmthScore": 20
+        }
+      ],
+      "notes": "只穿了上衣"
+    },
+    {
+      "createdAt": "2026-06-24T08:00:00Z",
+      "date": "2026-06-24T08:00:00Z",
+      "id": "B2C3D4E5-F6A7-4B8C-9D0E-1F2A3B4C5D6E",
+      "isActive": false,
+      "items": [
+        {
+          "brand": "示例品牌",
+          "category": "top",
+          "createdAt": "2026-06-20T08:00:00Z",
+          "dominantColor": {
+            "alpha": 1,
+            "blue": 0.96,
+            "green": 0.96,
+            "hex": "#F5F5F5",
+            "name": "白色",
+            "red": 0.96
+          },
+          "dominantColorCategory": "white",
+          "id": "7A2C1D9E-3B4F-4C5A-9D6E-1F2A3B4C5D6E",
+          "images": {
+            "display": {
+              "byteCount": 70,
+              "displayable": true,
+              "format": "png",
+              "url": "/api/v1/items/7A2C1D9E-3B4F-4C5A-9D6E-1F2A3B4C5D6E/image?variant=display&v=cdb30873bdf16770"
+            },
+            "original": {
+              "byteCount": 22,
+              "displayable": true,
+              "format": "jpeg",
+              "url": "/api/v1/items/7A2C1D9E-3B4F-4C5A-9D6E-1F2A3B4C5D6E/image?variant=original&v=d20f6ffd523b78a8"
+            },
+            "processed": {
+              "byteCount": 70,
+              "displayable": true,
+              "format": "png",
+              "url": "/api/v1/items/7A2C1D9E-3B4F-4C5A-9D6E-1F2A3B4C5D6E/image?variant=processed&v=cdb30873bdf16770"
+            }
+          },
+          "isWaterproof": false,
+          "laundryRetentionWarning": false,
+          "name": "白色T恤",
+          "scenarios": [
+            "work",
+            "casual"
+          ],
+          "seasons": [
+            "spring",
+            "summer"
+          ],
+          "status": "inWardrobe",
+          "subtype": "tee",
+          "title": "白色T恤",
+          "updatedAt": "2026-06-21T09:30:00Z",
+          "warmthLevel": "warm",
+          "warmthLevels": [
+            "warm"
+          ],
+          "warmthScore": 20
+        },
+        {
+          "category": "bottom",
+          "createdAt": "2026-06-20T08:05:00Z",
+          "dominantColor": {
+            "alpha": 1,
+            "blue": 0.31,
+            "green": 0.16,
+            "hex": "#1F294F",
+            "name": "藏青",
+            "red": 0.12
+          },
+          "dominantColorCategory": "blue",
+          "id": "8B3D2E0F-4C5A-4D6B-8E7F-2A3B4C5D6E7F",
+          "images": {},
+          "isWaterproof": false,
+          "laundryEntryDate": "2026-07-01T20:15:00Z",
+          "laundryRetentionWarning": true,
+          "name": "",
+          "scenarios": [],
+          "seasons": [],
+          "secondaryColor": {
+            "alpha": 1,
+            "blue": 0.5,
+            "green": 0.5,
+            "hex": "#808080",
+            "name": "灰色",
+            "red": 0.5
+          },
+          "status": "inLaundry",
+          "subtype": "jeans",
+          "title": "下装",
+          "updatedAt": "2026-07-01T20:15:00Z",
+          "warmthLevel": "mild",
+          "warmthLevels": [
+            "cool",
+            "mild"
+          ],
+          "warmthScore": 50
+        },
+        {
+          "category": "shoes",
+          "createdAt": "2026-06-22T10:00:00Z",
+          "dominantColor": {
+            "alpha": 1,
+            "blue": 0.1,
+            "green": 0.2,
+            "hex": "#4D331A",
+            "name": "咖啡",
+            "red": 0.3
+          },
+          "dominantColorCategory": "brown",
+          "id": "9C4E3F1A-5D6B-4E7C-9F8A-3B4C5D6E7F8A",
+          "images": {},
+          "isWaterproof": true,
+          "laundryRetentionWarning": false,
+          "name": "防水靴",
+          "notes": "雨天穿",
+          "scenarios": [
+            "casual"
+          ],
+          "seasons": [
+            "spring",
+            "autumn"
+          ],
+          "status": "inLuggage",
+          "subtype": "boots",
+          "title": "防水靴",
+          "updatedAt": "2026-06-22T10:00:00Z",
+          "warmthLevel": "cool",
+          "warmthLevels": [
+            "cool"
+          ],
+          "warmthScore": 60
+        }
+      ],
+      "outfitId": "A1B2C3D4-E5F6-4A7B-8C9D-0E1F2A3B4C5D"
+    }
+  ]
+}

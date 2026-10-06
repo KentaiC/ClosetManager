@@ -9,6 +9,7 @@
   --text-muted: #6b6b72;
   --border: #dcdce2;
   --danger: #c0392b;
+  --warning: #c26a00;
   --laundry: #2471a3;
   --radius: 16px;
   font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', 'Noto Sans CJK SC', sans-serif;
@@ -28,6 +29,7 @@
     --text-muted: #a0a0aa;
     --border: #34343c;
     --danger: #e57366;
+    --warning: #f0a04b;
     --laundry: #6fb3e8;
   }
 }
@@ -123,3 +125,82 @@ button { font: inherit; }
 .empty-state { text-align: center; padding: 40px 16px; color: var(--text-muted); }
 .empty-state h2 { color: var(--text); font-size: 1.1rem; }
 .button { display: inline-block; border: 1px solid var(--border); background: var(--surface); color: var(--text); border-radius: 10px; padding: 8px 16px; cursor: pointer; text-decoration: none; }
+
+/* 页面结构 */
+.page-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.page-heading .page-title { margin-bottom: 16px; }
+.stack { display: flex; flex-direction: column; gap: 14px; }
+.stack > .panel { margin-bottom: 0; }
+.center { text-align: center; }
+.hint { font-size: 0.8rem; color: var(--text-muted); margin: 6px 0; }
+.hint.warning, .warning { color: var(--warning); }
+.field-title { font-size: 0.9rem; font-weight: 600; margin: 0 0 6px; display: flex; align-items: center; gap: 6px; }
+.required-tag { font-size: 0.7rem; font-weight: 600; color: var(--warning); }
+.chips-wrap { flex-wrap: wrap; overflow-x: visible; padding: 2px 0; }
+
+/* 按钮 */
+.button:disabled { opacity: 0.45; cursor: not-allowed; }
+.button:focus-visible, .chip:focus-visible, .link-button:focus-visible, .thumb-button:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+.button-primary { background: var(--accent); border-color: var(--accent); color: var(--accent-contrast); }
+.button-danger { background: var(--danger); border-color: var(--danger); color: #ffffff; }
+.button-warning { background: var(--warning); border-color: var(--warning); color: #ffffff; }
+.button-block { display: block; width: 100%; text-align: center; margin-top: 12px; }
+.stack > .button-block { margin-top: 0; }
+.link-button { border: 0; background: none; padding: 4px 6px; color: var(--accent); cursor: pointer; }
+.link-button.danger { color: var(--danger); }
+.row-buttons { display: flex; gap: 12px; }
+.row-buttons > .button { flex: 1; text-align: center; }
+.row-actions { display: inline-flex; align-items: center; gap: 10px; }
+.segmented-full { display: flex; margin-bottom: 16px; }
+.segmented-full button { flex: 1; }
+
+/* 表单 */
+.form { border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); padding: 14px; margin: 0 0 16px; min-width: 0; }
+fieldset.form legend, .form fieldset legend { font-weight: 600; padding: 0 6px; }
+.form fieldset { border: 0; padding: 0; margin: 0; min-width: 0; }
+.form-row { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 12px; padding: 8px 0; }
+.form-row > span:first-child { color: var(--text-muted); }
+.form-row input[type='text'], .form-row input[type='number'], .form-row select, .form-row textarea {
+  font: inherit; color: var(--text); background: var(--surface-muted); border: 1px solid var(--border); border-radius: 8px; padding: 6px 10px; min-width: 0; max-width: 100%;
+}
+.form-row textarea { width: 100%; min-height: 4.5em; }
+.form-row input[type='range'] { flex: 1 1 200px; accent-color: var(--accent); }
+.form-actions { display: flex; justify-content: flex-end; gap: 12px; margin-top: 12px; }
+.form-error { color: var(--danger); margin: 8px 0 0; }
+.link-list { list-style: none; margin: 0; padding: 0; }
+.link-list li a { display: block; padding: 10px 0; color: var(--accent); text-decoration: none; }
+
+/* 勾选列表（脱下穿搭） */
+.check-list { list-style: none; margin: 12px 0 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.check-list label { display: flex; align-items: center; gap: 10px; cursor: pointer; }
+.check-list .thumb { width: 48px; flex: 0 0 48px; }
+.check-list label > span { display: flex; flex-direction: column; min-width: 0; }
+.check-title { font-weight: 600; }
+
+/* 对话框与提示 */
+.dialog-backdrop { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.45); display: flex; align-items: center; justify-content: center; padding: 16px; z-index: 20; }
+.dialog { background: var(--surface); color: var(--text); border-radius: var(--radius); width: min(520px, 100%); max-height: calc(100vh - 32px); display: flex; flex-direction: column; outline: none; box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3); }
+.dialog-title { font-size: 1.1rem; margin: 0; padding: 16px 16px 0; }
+.dialog-body { padding: 8px 16px; overflow-y: auto; }
+.dialog-footer { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; padding: 12px 16px 16px; }
+.toast-region { position: fixed; left: 0; right: 0; bottom: 24px; display: flex; justify-content: center; pointer-events: none; z-index: 30; }
+.toast { background: var(--text); color: var(--bg); padding: 10px 16px; border-radius: 999px; font-size: 0.9rem; box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2); }
+
+/* 徽标 */
+.badge-warning { color: var(--warning); }
+.badge-inline { font-size: 0.72rem; font-weight: 600; padding: 2px 8px; border-radius: 999px; background: var(--surface-muted); }
+.badge-active { color: var(--accent); }
+
+/* 可选卡片（洗衣房） */
+.item-card.selectable { font: inherit; color: inherit; text-align: left; cursor: pointer; }
+.item-card.selectable.selected { outline: 3px solid var(--accent); outline-offset: -3px; }
+.select-mark { position: absolute; top: 6px; left: 6px; width: 22px; height: 22px; border-radius: 50%; border: 2px solid var(--border); background: var(--surface); color: var(--accent-contrast); display: flex; align-items: center; justify-content: center; font-size: 0.8rem; }
+.selected .select-mark { background: var(--accent); border-color: var(--accent); }
+.sticky-actions { position: sticky; bottom: 0; padding: 12px 0; background: linear-gradient(transparent, var(--bg) 30%); }
+
+/* 记录列表（日历、收藏夹） */
+.record-list { list-style: none; margin: 0; padding: 0; }
+.record-list .panel-header { align-items: center; margin: 10px 0 0; }
+.record-list .panel-header:first-child { margin: 0 0 10px; }
+.thumb-wrap { flex: 0 0 auto; }
+.thumb-wrap .thumb { width: 100%; flex-basis: auto; }

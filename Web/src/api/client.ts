@@ -1,4 +1,17 @@
-import type { ApiHealth, ApiItem, ApiList, ApiMeta, ApiOutfit, ApiWearRecord } from './types'
+import type {
+  ApiAnalytics,
+  ApiHealth,
+  ApiItem,
+  ApiList,
+  ApiMember,
+  ApiMeta,
+  ApiOutfit,
+  ApiProfile,
+  ApiSuggestions,
+  ApiTravelPlan,
+  ApiWearRecord,
+  ItemUpdate,
+} from './types'
 
 /** 服务端返回的错误，或网络错误。 */
 export class ApiError extends Error {
@@ -61,14 +74,67 @@ function query(params: Record<string, string | undefined>): string {
 export const api = {
   health: () => request<ApiHealth>('GET', '/api/v1/health'),
   meta: () => request<ApiMeta>('GET', '/api/v1/meta'),
-  items: (filter: { status?: string; category?: string } = {}) =>
+  items: (filter: { status?: string; category?: string; sort?: 'createdAt' | 'updatedAt' } = {}) =>
     request<ApiList<ApiItem>>('GET', `/api/v1/items${query(filter)}`).then((list) => list.items),
   item: (id: string) => request<ApiItem>('GET', `/api/v1/items/${encodeURIComponent(id)}`),
+  updateItem: (id: string, update: ItemUpdate) => request<ApiItem>('PUT', `/api/v1/items/${encodeURIComponent(id)}`, update),
+  deleteItem: (id: string) => request<void>('DELETE', `/api/v1/items/${encodeURIComponent(id)}`),
+  defaultName: (category: string, subtype: string | null, colorHex: string) =>
+    request<{ name: string }>(
+      'GET',
+      `/api/v1/naming/default-name${query({ category, subtype: subtype ?? undefined, color: colorHex.replace('#', '') })}`,
+    ).then((result) => result.name),
+
   outfits: (favoritesOnly: boolean) =>
     request<ApiList<ApiOutfit>>('GET', `/api/v1/outfits${query({ favorite: favoritesOnly ? 'true' : undefined })}`).then(
       (list) => list.items,
     ),
+  suggestions: (params: { warmth: string; scenario: string; requireWaterproof: boolean; maxCount?: number }) =>
+    request<ApiSuggestions>(
+      'GET',
+      `/api/v1/outfit-suggestions${query({
+        warmth: params.warmth,
+        scenario: params.scenario,
+        requireWaterproof: String(params.requireWaterproof),
+        maxCount: params.maxCount?.toString(),
+      })}`,
+    ),
+  createOutfit: (body: {
+    source: 'generated' | 'manual'
+    targetScenario?: string
+    targetWarmthLevel?: string
+    members: ApiMember[]
+  }) => request<ApiOutfit>('POST', '/api/v1/outfits', body),
+  wearOutfit: (id: string) => request<ApiWearRecord>('POST', `/api/v1/outfits/${encodeURIComponent(id)}/wear`),
+  deleteOutfit: (id: string) => request<void>('DELETE', `/api/v1/outfits/${encodeURIComponent(id)}`),
+
   wearRecords: () => request<ApiList<ApiWearRecord>>('GET', '/api/v1/wear-records').then((list) => list.items),
   activeWearRecord: () =>
     request<{ record?: ApiWearRecord }>('GET', '/api/v1/wear-records/active').then((result) => result.record ?? null),
+  wear: (members: ApiMember[]) => request<ApiWearRecord>('POST', '/api/v1/wear-records', { members }),
+  takeOff: (recordId: string, laundryItemIds: string[]) =>
+    request<ApiWearRecord>('POST', `/api/v1/wear-records/${encodeURIComponent(recordId)}/take-off`, { laundryItemIds }),
+  deleteWearRecord: (id: string) => request<void>('DELETE', `/api/v1/wear-records/${encodeURIComponent(id)}`),
+  returnFromLaundry: (itemIds: string[]) =>
+    request<ApiList<ApiItem>>('POST', '/api/v1/laundry/return', { itemIds }).then((list) => list.items),
+
+  analytics: () => request<ApiAnalytics>('GET', '/api/v1/analytics'),
+  search: (params: { scenario?: string; colorCategory?: string; waterproof?: boolean; unwornDays?: number }) =>
+    request<ApiList<ApiItem>>(
+      'GET',
+      `/api/v1/search${query({
+        scenario: params.scenario,
+        colorCategory: params.colorCategory,
+        waterproof: params.waterproof ? 'true' : undefined,
+        unwornDays: params.unwornDays?.toString(),
+      })}`,
+    ).then((list) => list.items),
+
+  travelPlan: (params: { days: number; warmth: string; scenario: string }) =>
+    request<ApiTravelPlan>('GET', `/api/v1/travel/plan${query({ ...params, days: String(params.days) })}`),
+  pack: (itemIds: string[]) => request<ApiList<ApiItem>>('POST', '/api/v1/travel/pack', { itemIds }).then((list) => list.items),
+  unpackAll: () => request<{ count: number }>('POST', '/api/v1/travel/unpack-all').then((result) => result.count),
+
+  profile: () => request<ApiProfile>('GET', '/api/v1/settings/profile'),
+  updateProfile: (profile: ApiProfile) => request<ApiProfile>('PUT', '/api/v1/settings/profile', profile),
 }

@@ -15,6 +15,7 @@
       "id": "9C4E3F1A-5D6B-4E7C-9F8A-3B4C5D6E7F8A",
       "images": {},
       "isWaterproof": true,
+      "laundryRetentionWarning": false,
       "name": "防水靴",
       "notes": "雨天穿",
       "scenarios": [
@@ -50,6 +51,7 @@
       "images": {},
       "isWaterproof": false,
       "laundryEntryDate": "2026-07-01T20:15:00Z",
+      "laundryRetentionWarning": true,
       "name": "",
       "scenarios": [],
       "seasons": [],
@@ -107,6 +109,7 @@
         }
       },
       "isWaterproof": false,
+      "laundryRetentionWarning": false,
       "name": "白色T恤",
       "scenarios": [
         "work",

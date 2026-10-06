@@ -40,6 +40,7 @@
           }
         },
         "isWaterproof": false,
+        "laundryRetentionWarning": false,
         "name": "白色T恤",
         "scenarios": [
           "work",
