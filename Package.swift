@@ -7,9 +7,12 @@ import PackageDescription
 // 文件系统同步分组 `ClosetManager/Core` 中：Xcode 把这些文件编译进 App 模块，
 // SwiftPM 把同一批文件编译成独立的 ClosetCore 模块，两边只有一份源码。
 //
+// ClosetImaging 以同样方式共享 `ClosetManager/Imaging` 中的抠图、取色与相似检测代码。
+// 它依赖 Vision，只在 macOS 上有内容；Linux 上编译为空模块。
+//
 // 服务端各层位于 `Server/Sources`：
 // ClosetStorage   SQLite 数据库与按内容寻址的图片存储
-// ClosetServices  应用服务：备份导入、只读查询，后续承载各项业务用例
+// ClosetServices  应用服务：备份、查询、编辑、穿着流转、穿搭、看板、图片处理
 // ClosetHTTP      HTTP API 与安全中间件（Hummingbird）
 // ClosetServer    命令行入口 closet-server
 let package = Package(
@@ -32,6 +35,12 @@ let package = Package(
             // 与 App 的 SWIFT_VERSION = 5.0 保持一致，保证两边按同一语言模式编译。
             swiftSettings: [.swiftLanguageMode(.v5)]
         ),
+        .target(
+            name: "ClosetImaging",
+            dependencies: ["ClosetCore"],
+            path: "ClosetManager/Imaging",
+            swiftSettings: [.swiftLanguageMode(.v5)]
+        ),
         // Linux 上通过系统库使用 SQLite；macOS 直接使用 SDK 中的 SQLite3 模块。
         .systemLibrary(
             name: "CSQLite",
@@ -50,7 +59,7 @@ let package = Package(
         ),
         .target(
             name: "ClosetServices",
-            dependencies: ["ClosetCore", "ClosetStorage"],
+            dependencies: ["ClosetCore", "ClosetStorage", "ClosetImaging"],
             path: "Server/Sources/ClosetServices"
         ),
         .target(

@@ -1,22 +1,34 @@
+#if canImport(Vision)
 import Foundation
 import Vision
 import CoreGraphics
 import ImageIO
+#if canImport(ClosetCore)
+import ClosetCore
+#endif
 
 /// 本地相似单品检测（actor，后台执行；绝不在录入时自动跑，只作手动工具）。
 ///
 /// 原理：用 `VNGenerateImageFeaturePrintRequest` 为每张图算「特征指纹」(`VNFeaturePrintObservation`)，
 /// 两两用 `computeDistance` 求视觉距离（越小越像），再结合主色距离做二次确认，
 /// 把同时满足两个阈值的单品用并查集聚成相似组。
-actor DuplicationDetectorService {
-    static let shared = DuplicationDetectorService()
+///
+/// 与 `VisionService` 一样，App 与本地 Web 服务端（macOS）编译同一份源文件。
+public actor DuplicationDetectorService {
+    public static let shared = DuplicationDetectorService()
     private init() {}
 
     /// 传入的可 Sendable 输入（避免把 @Model 跨 actor 传递）。
-    struct ItemFingerprintInput: Sendable {
-        let id: UUID
-        let imageData: Data?
-        let color: StoredColor
+    public struct ItemFingerprintInput: Sendable {
+        public let id: UUID
+        public let imageData: Data?
+        public let color: StoredColor
+
+        public init(id: UUID, imageData: Data?, color: StoredColor) {
+            self.id = id
+            self.imageData = imageData
+            self.color = color
+        }
     }
 
     /// 找出相似组，返回成组的单品 id（每组 ≥ 2 件）。
@@ -25,7 +37,7 @@ actor DuplicationDetectorService {
     /// - Parameters:
     ///   - featureThreshold: 特征距离阈值（越小越严格）。VNFeaturePrint 距离无固定上界，需用真实衣橱微调。
     ///   - colorThreshold: 主色 RGB 曼哈顿距离阈值（0...3，越小越严格）。
-    func findSimilarGroups(
+    public func findSimilarGroups(
         _ inputs: [ItemFingerprintInput],
         featureThreshold: Float = SimilarityGrouping.featureThreshold,
         colorThreshold: Double = SimilarityGrouping.colorThreshold
@@ -78,3 +90,4 @@ actor DuplicationDetectorService {
         return CGImageSourceCreateImageAtIndex(source, 0, nil)
     }
 }
+#endif // canImport(Vision)

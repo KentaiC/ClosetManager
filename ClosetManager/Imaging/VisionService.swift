@@ -1,9 +1,13 @@
+#if canImport(Vision)
 import Foundation
 import Vision
 import CoreImage
 import CoreGraphics
 import ImageIO
 import UniformTypeIdentifiers
+#if canImport(ClosetCore)
+import ClosetCore
+#endif
 
 /// 本地图像处理服务（与 UI 解耦）。
 ///
@@ -12,22 +16,24 @@ import UniformTypeIdentifiers
 /// - 核心管线全部基于跨平台的 `CGImage` / `Data`（ImageIO + Vision + CoreImage），
 ///   因此同一份代码可在 iOS 17+ 与 macOS 14+ 编译运行，不直接依赖 UIImage / NSImage。
 /// - 输入：相册选图得到的原始 `Data`；输出：带透明背景的 PNG `Data`，可直接存入 SwiftData。
-actor VisionService {
+/// - 源文件位于 `ClosetManager/Imaging`：Xcode 把它编译进 App，SwiftPM 把同一份文件编译成 ClosetImaging 模块，
+///   供本地 Web 服务端在 macOS 上使用。没有 Vision 的平台（如 Linux）上整个文件不参与编译。
+public actor VisionService {
     /// 全局单例。
-    static let shared = VisionService()
+    public static let shared = VisionService()
 
     private let ciContext = CIContext()
 
     private init() {}
 
     /// 处理过程中可能出现的错误，均带中文文案，便于 UI 直接展示。
-    enum VisionServiceError: LocalizedError {
+    public enum VisionServiceError: LocalizedError {
         case invalidImageData
         case noForegroundDetected
         case maskGenerationFailed
         case encodingFailed
 
-        var errorDescription: String? {
+        public var errorDescription: String? {
             switch self {
             case .invalidImageData:     return "无法解析所选图片数据。"
             case .noForegroundDetected: return "未能识别到衣物主体，请换一张主体清晰、背景简单的图片。"
@@ -52,7 +58,7 @@ actor VisionService {
     /// 再用观察结果生成「仅保留主体、背景透明」的图像。
     /// - Parameter imageData: 原始图片二进制（来自 PhotosPicker）。
     /// - Returns: 去背后的 PNG 数据。
-    func removeBackground(from imageData: Data) async throws -> Data {
+    public func removeBackground(from imageData: Data) async throws -> Data {
         guard let cgImage = Self.makeCGImage(from: imageData) else {
             throw VisionServiceError.invalidImageData
         }
@@ -106,7 +112,7 @@ actor VisionService {
     /// 建议传入已抠图（透明背景）的数据，背景透明像素会被跳过，从而只统计衣物本体颜色。
     /// 失败时返回中性灰主色、无辅色，绝不抛错（取色非关键路径）。
     /// 统计规则在共享核心 `ColorExtraction` 中，这里只负责解码与缩放采样。
-    func extractColors(from imageData: Data) async -> (dominant: StoredColor, secondary: StoredColor?) {
+    public func extractColors(from imageData: Data) async -> (dominant: StoredColor, secondary: StoredColor?) {
         guard let cgImage = Self.makeCGImage(from: imageData),
               let pixels = Self.sampleRGBA(cgImage, size: ColorExtraction.sampleSize) else {
             return (ColorExtraction.fallback, nil)
@@ -164,3 +170,4 @@ actor VisionService {
         return mutableData as Data
     }
 }
+#endif // canImport(Vision)
