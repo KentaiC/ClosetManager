@@ -6,6 +6,7 @@ import Foundation
 /// <root>/closet.sqlite
 /// <root>/media/
 /// <root>/backups/pre-migration/
+/// <root>/backups/before-import/
 /// <root>/tmp/
 /// ```
 public struct DataDirectory: Sendable {
@@ -18,6 +19,8 @@ public struct DataDirectory: Sendable {
     public var databaseURL: URL { root.appendingPathComponent("closet.sqlite") }
     public var mediaURL: URL { root.appendingPathComponent("media", isDirectory: true) }
     public var preMigrationBackupsURL: URL { root.appendingPathComponent("backups/pre-migration", isDirectory: true) }
+    /// 导入备份前自动保存的当前数据。
+    public var beforeImportBackupsURL: URL { root.appendingPathComponent("backups/before-import", isDirectory: true) }
     public var temporaryURL: URL { root.appendingPathComponent("tmp", isDirectory: true) }
 
     /// 创建目录结构，权限仅限当前用户。

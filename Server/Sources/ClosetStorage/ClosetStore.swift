@@ -6,6 +6,8 @@ import Foundation
 public actor ClosetStore {
     private let db: SQLiteDatabase
     public nonisolated let media: MediaStore
+    /// 数据目录。内存数据库没有数据目录。
+    public nonisolated let directory: DataDirectory?
 
     /// 打开（必要时创建）数据目录中的数据库，并执行待执行的迁移。
     public init(directory: DataDirectory) throws {
@@ -15,6 +17,7 @@ public actor ClosetStore {
         try MigrationRunner.migrate(db, backupBeforeUpgrade: directory.preMigrationBackupsURL)
         self.db = db
         self.media = MediaStore(root: directory.mediaURL)
+        self.directory = directory
     }
 
     /// 内存数据库，供测试使用。
@@ -23,6 +26,7 @@ public actor ClosetStore {
         try MigrationRunner.migrate(db, backupBeforeUpgrade: nil)
         self.db = db
         self.media = MediaStore(root: mediaRoot)
+        self.directory = nil
     }
 
     public func schemaVersion() throws -> Int {

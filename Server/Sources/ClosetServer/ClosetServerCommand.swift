@@ -59,7 +59,7 @@ struct Serve: AsyncParsableCommand {
 
 struct Import: AsyncParsableCommand {
     static let configuration = CommandConfiguration(
-        abstract: "导入 App 导出的 .wardrobe 备份。默认只做预检，加 --apply 才写入。")
+        abstract: "导入 App 导出的 .wardrobe 备份。默认只做预检，加 --apply 才写入；写入前自动备份当前数据。")
 
     @OptionGroup var data: DataDirectoryOption
 
@@ -85,13 +85,7 @@ struct Import: AsyncParsableCommand {
         let restoreMode = RestoreMode(rawValue: mode)!
         let data = try Data(contentsOf: URL(fileURLWithPath: file))
         let store = try ClosetStore(directory: self.data.directory)
-        let report: ImportReport
-        do {
-            report = try await BackupImporter(store: store).importBackup(data, mode: restoreMode, dryRun: !apply)
-        } catch ImportError.rejected(let rejected) {
-            print(try render(rejected))
-            throw ExitCode(2)
-        }
+        let report = try await BackupRestoreService(store: store).restore(data, mode: restoreMode, apply: apply)
         print(try render(report))
         if !report.errors.isEmpty { throw ExitCode(2) }
     }
@@ -110,6 +104,7 @@ struct Import: AsyncParsableCommand {
             "穿着记录：备份 \(report.wearRecords.inBackup)，导入 \(report.wearRecords.toImport)，跳过 \(report.wearRecords.skippedExisting)",
             "图片：\(report.imageCount) 张，共 \(report.imageBytes) 字节",
         ]
+        if let snapshot = report.preImportBackup { lines.append("导入前的数据已备份为 backups/before-import/\(snapshot)") }
         for issue in report.errors { lines.append("错误 [\(issue.code.rawValue)] \(issue.entity ?? "") \(issue.id ?? "")：\(issue.message)") }
         for issue in report.warnings { lines.append("警告 [\(issue.code.rawValue)] \(issue.entity ?? "") \(issue.id ?? "")：\(issue.message)") }
         return lines.joined(separator: "\n")

@@ -144,7 +144,7 @@ final class APITests: XCTestCase {
             try WardrobeBackup.makeEncoder().encode(WardrobeBackup.Bundle(items: [dto], outfits: [], wearRecords: [])), mode: .merge, dryRun: false)
         try await app().test(.router) { client in
             let response = try await client.execute(uri: "/api/v1/items/\(id.uuidString)/image", method: .get)
-            XCTAssertEqual(response.headers[.contentType], "application/octet-stream")
+            XCTAssertEqual(response.headers[.contentType], "application/octet-stream", String(decoding: Data(response.body.readableBytesView), as: UTF8.self))
             XCTAssertTrue(response.headers[.contentDisposition]?.hasPrefix("attachment") ?? false)
             XCTAssertEqual(response.headers[HTTPField.Name("X-Content-Type-Options")!], "nosniff")
         }

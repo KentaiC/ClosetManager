@@ -64,6 +64,8 @@ public struct ImportReport: Codable, Sendable {
     public var warnings: [ImportIssue] = []
     public var errors: [ImportIssue] = []
     public var applied = false
+    /// 写入前自动保存的当前数据备份的文件名，位于数据目录的 `backups/before-import`。
+    public var preImportBackup: String?
 
     public init(mode: RestoreMode, dryRun: Bool, backupVersion: Int) {
         self.mode = mode
