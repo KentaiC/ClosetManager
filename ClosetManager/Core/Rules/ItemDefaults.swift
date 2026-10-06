@@ -15,3 +15,10 @@ public enum ItemDefaults {
         return colorName + typeName
     }
 }
+
+extension ItemDefaults {
+    /// 列表与卡片上显示的标题：名称为空时显示分类名（与 App 的 ItemCard、TakeOffSheet 相同）。
+    public static func displayTitle(name: String, category: Category) -> String {
+        name.isEmpty ? category.displayName : name
+    }
+}

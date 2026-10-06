@@ -74,3 +74,18 @@ final class WardrobeBackupContractTests: XCTestCase {
         XCTAssertEqual(ItemDefaults.defaultName(color: StoredColor(red: 181 / 255, green: 145 / 255, blue: 102 / 255), subtype: .overcoat, category: .outerwear), "橙色大衣")
     }
 }
+
+final class WardrobeRulesTests: XCTestCase {
+    func testLaundryRetentionWarningAfterFourDays() {
+        let entry = Date(timeIntervalSince1970: 1_000_000)
+        XCTAssertFalse(WardrobeRules.isLaundryRetentionWarning(entryDate: nil, now: entry))
+        XCTAssertFalse(WardrobeRules.isLaundryRetentionWarning(entryDate: entry, now: entry.addingTimeInterval(4 * 86_400)))
+        XCTAssertTrue(WardrobeRules.isLaundryRetentionWarning(entryDate: entry, now: entry.addingTimeInterval(4 * 86_400 + 1)))
+        XCTAssertEqual(WardrobeRules.unwornDays, 90)
+    }
+
+    func testDisplayTitleFallsBackToCategory() {
+        XCTAssertEqual(ItemDefaults.displayTitle(name: "", category: .socks), "袜子")
+        XCTAssertEqual(ItemDefaults.displayTitle(name: "白T", category: .top), "白T")
+    }
+}
