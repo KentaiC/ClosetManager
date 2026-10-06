@@ -44,6 +44,8 @@ export interface ApiItem {
     display?: ApiImage
     processed?: ApiImage
     original?: ApiImage
+    /** 列表用的缩略图地址；服务端不能生成缩略图时返回展示图。 */
+    thumbnailUrl?: string
   }
 }
 
@@ -84,7 +86,67 @@ export interface ApiHealth {
   version: string
   schemaVersion: number
   counts: { items: number; outfits: number; wearRecords: number; media: number }
-  capabilities: { backgroundRemoval: boolean; similarityDetection: boolean }
+  capabilities: ApiCapabilities
+}
+
+/** 服务端的图片处理能力。抠图、取色、格式转换与相似检测需要在 macOS 上运行服务。 */
+export interface ApiCapabilities {
+  backgroundRemoval: boolean
+  colorExtraction: boolean
+  formatConversion: boolean
+  similarityDetection: boolean
+}
+
+/** 已上传的图片，保存到单品之前也可以预览。 */
+export interface ApiUploadedImage {
+  sha256: string
+  format: string
+  byteCount: number
+  width?: number
+  height?: number
+  displayable: boolean
+  url: string
+  thumbnailUrl: string
+}
+
+/** 抠图与取色的结果。 */
+export interface ApiProcessedImage {
+  original: ApiUploadedImage
+  processed?: ApiUploadedImage
+  dominantColor?: ApiColor
+  secondaryColor?: ApiColor
+  /** 抠图失败时的提示。失败时仍可保存。 */
+  failure?: string
+}
+
+export interface ApiImportIssue {
+  code: string
+  message: string
+  entity?: string
+  id?: string
+}
+
+export interface ApiImportCounts {
+  inBackup: number
+  toImport: number
+  skippedExisting: number
+}
+
+/** 备份导入报告，对应服务端 ImportReport。 */
+export interface ApiImportReport {
+  mode: string
+  dryRun: boolean
+  backupVersion: number
+  items: ApiImportCounts
+  outfits: ApiImportCounts
+  wearRecords: ApiImportCounts
+  imageCount: number
+  imageBytes: number
+  warnings: ApiImportIssue[]
+  errors: ApiImportIssue[]
+  applied: boolean
+  /** 写入前自动保存的当前数据备份的文件名。 */
+  preImportBackup?: string
 }
 
 export interface MetaOption {
@@ -163,4 +225,10 @@ export interface ItemUpdate {
   brand: string
   notes: string
   dominantColor: { red: number; green: number; blue: number; alpha: number }
+  /** 新增单品时必填；编辑时只在更换图片时提交。 */
+  images?: {
+    original: string
+    processed?: string
+    secondaryColor?: { red: number; green: number; blue: number; alpha: number }
+  }
 }

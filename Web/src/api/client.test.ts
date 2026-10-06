@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { json, mockFetch } from '../test/fixtures'
-import { ApiError, CLIENT_HEADER, api, request } from './client'
+import { ApiError, CLIENT_HEADER, api, fileNameFrom, request } from './client'
 
 describe('request', () => {
   it('sends the client header only on writes', async () => {
@@ -39,5 +39,25 @@ describe('request', () => {
     await api.outfits(true)
     await api.outfits(false)
     expect(calls.map((c) => c.url.search)).toEqual(['?status=inLaundry', '?favorite=true', ''])
+  })
+})
+
+describe('binary bodies', () => {
+  it('sends files as raw bytes with their type, or octet-stream when the type is unknown', async () => {
+    const calls = mockFetch({ '/api/v1/images': () => json({}, 201), '/api/v1/backup/import': () => json({}) })
+    const photo = new File([new Uint8Array([1, 2, 3])], 'a.heic', { type: 'image/heic' })
+    await api.uploadImage(photo)
+    await api.importBackup(new File(['{}'], 'b.wardrobe'), 'overwrite', false)
+    const upload = calls[0]!.init!
+    expect(upload.body).toBe(photo)
+    expect((upload.headers as Record<string, string>)['Content-Type']).toBe('image/heic')
+    expect((upload.headers as Record<string, string>)[CLIENT_HEADER]).toBe('web')
+    expect((calls[1]!.init!.headers as Record<string, string>)['Content-Type']).toBe('application/octet-stream')
+    expect(calls[1]!.url.search).toBe('?mode=overwrite&apply=false')
+  })
+
+  it('reads the download file name from Content-Disposition', () => {
+    expect(fileNameFrom('attachment; filename="ClosetBackup-2026-10-07T00-00-00Z.wardrobe"', 'x')).toBe('ClosetBackup-2026-10-07T00-00-00Z.wardrobe')
+    expect(fileNameFrom(null, 'ClosetBackup.wardrobe')).toBe('ClosetBackup.wardrobe')
   })
 })

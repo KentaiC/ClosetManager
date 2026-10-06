@@ -1,12 +1,15 @@
 import { api } from './api/client'
 import { useResource } from './api/useResource'
 import { ErrorBoundary, ErrorPanel, Loading } from './app/Feedback'
+import { CapabilitiesProvider } from './app/capabilities'
 import { DataVersionProvider } from './app/dataVersion'
 import { MetaLookup, MetaProvider } from './app/meta'
 import { Link, useRoute, type Route } from './app/router'
 import { ToastProvider } from './app/toast'
 import { AnalyticsPage } from './features/analytics/AnalyticsPage'
 import { CalendarPage } from './features/calendar/CalendarPage'
+import { BatchImportPage } from './features/items/BatchImportPage'
+import { NewItemPage } from './features/items/NewItemPage'
 import { LaundryPage } from './features/laundry/LaundryPage'
 import { OutfitsPage } from './features/outfits/OutfitsPage'
 import { ComingSoon } from './features/placeholder/ComingSoon'
@@ -18,7 +21,7 @@ import { WardrobePage } from './features/wardrobe/WardrobePage'
 
 /** 主导航，与 App 底部的五个 Tab 一一对应。 */
 const TABS: { to: string; label: string; matches: Route['name'][] }[] = [
-  { to: '/', label: '衣橱', matches: ['wardrobe', 'item', 'search'] },
+  { to: '/', label: '衣橱', matches: ['wardrobe', 'item', 'search', 'newItem', 'batchImport'] },
   { to: '/laundry', label: '洗衣房', matches: ['laundry'] },
   { to: '/outfits', label: '穿搭', matches: ['outfits'] },
   { to: '/calendar', label: '日历', matches: ['calendar'] },
@@ -48,6 +51,10 @@ function Page({ route }: { route: Route }) {
       return <SearchPage />
     case 'travel':
       return <TravelPage />
+    case 'newItem':
+      return <NewItemPage />
+    case 'batchImport':
+      return <BatchImportPage />
     case 'notFound':
       return <ComingSoon title="页面不存在" />
   }
@@ -55,7 +62,10 @@ function Page({ route }: { route: Route }) {
 
 export function App() {
   const route = useRoute()
-  const meta = useResource(() => api.meta().then((value) => new MetaLookup(value)), [])
+  const meta = useResource(
+    () => Promise.all([api.meta(), api.health()]).then(([value, health]) => ({ lookup: new MetaLookup(value), capabilities: health.capabilities })),
+    [],
+  )
 
   return (
     <DataVersionProvider>
@@ -87,10 +97,12 @@ export function App() {
             ) : !meta.data ? (
               <Loading label="正在连接本地服务…" />
             ) : (
-              <MetaProvider value={meta.data}>
-                <ErrorBoundary key={route.name === 'item' ? `item-${route.id}` : route.name}>
-                  <Page route={route} />
-                </ErrorBoundary>
+              <MetaProvider value={meta.data.lookup}>
+                <CapabilitiesProvider value={meta.data.capabilities}>
+                  <ErrorBoundary key={route.name === 'item' ? `item-${route.id}` : route.name}>
+                    <Page route={route} />
+                  </ErrorBoundary>
+                </CapabilitiesProvider>
               </MetaProvider>
             )}
           </main>

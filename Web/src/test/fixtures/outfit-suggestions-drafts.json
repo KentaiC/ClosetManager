@@ -1,7 +1,7 @@
 {
   "drafts": [
     {
-      "id": "14E1E24E-E686-4FE7-8697-A0C8D19920D5",
+      "id": "087C49C1-2CCA-43B0-BC9F-91C9A73D7481",
       "members": [
         {
           "item": {
@@ -36,7 +36,8 @@
                 "displayable": true,
                 "format": "png",
                 "url": "/api/v1/items/7A2C1D9E-3B4F-4C5A-9D6E-1F2A3B4C5D6E/image?variant=processed&v=cdb30873bdf16770"
-              }
+              },
+              "thumbnailUrl": "/api/v1/items/7A2C1D9E-3B4F-4C5A-9D6E-1F2A3B4C5D6E/image?variant=thumbnail&v=cdb30873bdf16770"
             },
             "isWaterproof": false,
             "laundryRetentionWarning": false,
@@ -94,7 +95,7 @@
             "status": "inWardrobe",
             "subtype": "jeans",
             "title": "蓝色牛仔裤",
-            "updatedAt": "2026-10-06T20:37:48Z",
+            "updatedAt": "2026-10-06T22:33:01Z",
             "warmthLevel": "mild",
             "warmthLevels": [
               "mild"
@@ -132,7 +133,7 @@
             "status": "inWardrobe",
             "subtype": "boots",
             "title": "防水靴",
-            "updatedAt": "2026-10-06T20:37:36Z",
+            "updatedAt": "2026-10-06T22:33:01Z",
             "warmthLevel": "cool",
             "warmthLevels": [
               "cool"

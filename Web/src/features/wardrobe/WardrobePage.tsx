@@ -57,6 +57,14 @@ export function WardrobePage() {
         <Link to="/search" className="button">
           高级筛选
         </Link>
+        <span className="row-actions">
+          <Link to="/items/new" className="button button-primary">
+            单件录入
+          </Link>
+          <Link to="/items/batch" className="button">
+            批量录入
+          </Link>
+        </span>
       </div>
       {showLaundry && <p className="notice">正在显示洗衣袋内衣物</p>}
 
@@ -65,7 +73,7 @@ export function WardrobePage() {
       ) : items.loading && !items.data ? (
         <Loading />
       ) : (items.data ?? []).length === 0 ? (
-        <EmptyState title="衣橱还是空的" description="可以先用 closet-server import 导入 App 的备份文件。" />
+        <EmptyState title="衣橱还是空的" description="点「单件录入」添加第一件衣物，或在设置中导入 App 的备份文件。" />
       ) : (
         <>
           <div className="chips" role="group" aria-label="分类">

@@ -3,6 +3,7 @@
 // 把下装洗净放回、取出行李箱、并把它的场景设为「休闲」后抓取的，所以其中下装的名称与 items.json 不同。
 import type {
   ApiAnalytics,
+  ApiHealth,
   ApiItem,
   ApiMeta,
   ApiOutfit,
@@ -12,6 +13,7 @@ import type {
   ApiWearRecord,
 } from '../api/types'
 import analyticsJSON from './fixtures/analytics.json'
+import healthJSON from './fixtures/health.json'
 import laundryJSON from './fixtures/items-status-inLaundry-sort-updatedAt.json'
 import itemsJSON from './fixtures/items.json'
 import metaJSON from './fixtures/meta.json'
@@ -26,6 +28,13 @@ import activeJSON from './fixtures/wear-records-active.json'
 import wearRecordsJSON from './fixtures/wear-records.json'
 
 export const metaFixture = metaJSON as ApiMeta
+/** Linux 上的真实服务：没有图片处理能力。 */
+export const healthFixture = healthJSON as ApiHealth
+/** 与 macOS 上运行时相同的能力，用于测试抠图、取色与相似检测的界面。 */
+export const macHealthFixture: ApiHealth = {
+  ...healthFixture,
+  capabilities: { backgroundRemoval: true, colorExtraction: true, formatConversion: true, similarityDetection: true },
+}
 export const itemsFixture = (itemsJSON as { items: ApiItem[] }).items
 export const laundryFixture = (laundryJSON as { items: ApiItem[] }).items
 export const outfitsFixture = (outfitsJSON as { items: ApiOutfit[] }).items
@@ -86,6 +95,7 @@ export const noContent = () => new Response(null, { status: 204 })
 
 export const standardRoutes: Record<string, Handler> = {
   '/api/v1/meta': () => json(metaFixture),
+  '/api/v1/health': () => json(healthFixture),
   '/api/v1/items': () => json({ items: itemsFixture }),
   '/api/v1/wear-records/active': () => json({ record: activeFixture }),
 }

@@ -261,3 +261,11 @@ fieldset.form legend, .form fieldset legend { font-weight: 600; padding: 0 6px; 
 .heat-3 { background: var(--accent); }
 .heatmap-legend { display: flex; align-items: center; gap: 6px; font-size: 0.72rem; color: var(--text-muted); }
 .heatmap-legend .heat { width: 10px; height: 10px; border-radius: 2px; }
+
+/* 图片录入 */
+.image-preview { height: 240px; border-radius: var(--radius); background: var(--surface-muted); display: flex; align-items: center; justify-content: center; margin-bottom: 10px; overflow: hidden; padding: 12px; text-align: center; }
+.image-preview img { max-width: 100%; max-height: 100%; object-fit: contain; }
+.drop-zone { border: 2px dashed var(--border); border-radius: var(--radius); padding: 32px 16px; text-align: center; background: var(--surface); }
+.drop-zone.active { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 8%, var(--surface)); }
+.batch-progress { display: flex; flex-direction: column; gap: 6px; margin-bottom: 12px; font-weight: 600; }
+.batch-progress progress { width: 100%; accent-color: var(--accent); }

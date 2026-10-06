@@ -1,0 +1,17 @@
+{
+  "capabilities": {
+    "backgroundRemoval": false,
+    "colorExtraction": false,
+    "formatConversion": false,
+    "similarityDetection": false
+  },
+  "counts": {
+    "items": 3,
+    "media": 2,
+    "outfits": 1,
+    "wearRecords": 2
+  },
+  "schemaVersion": 2,
+  "status": "ok",
+  "version": "0.2.0"
+}

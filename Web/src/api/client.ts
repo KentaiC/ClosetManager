@@ -1,14 +1,17 @@
 import type {
   ApiAnalytics,
   ApiHealth,
+  ApiImportReport,
   ApiItem,
   ApiList,
   ApiMember,
   ApiMeta,
   ApiOutfit,
+  ApiProcessedImage,
   ApiProfile,
   ApiSuggestions,
   ApiTravelPlan,
+  ApiUploadedImage,
   ApiWearRecord,
   ItemUpdate,
 } from './types'
@@ -31,18 +34,21 @@ export const CLIENT_HEADER = 'X-Closet-Client'
 
 type Method = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'
 
-export async function request<T>(method: Method, path: string, body?: unknown): Promise<T> {
+/** 发送请求并在失败时抛出 ApiError。body 为 Blob 时按原始字节发送（上传图片与备份文件）。 */
+async function send(method: Method, path: string, body?: unknown): Promise<Response> {
   const headers: Record<string, string> = { Accept: 'application/json' }
   if (method !== 'GET') headers[CLIENT_HEADER] = 'web'
-  if (body !== undefined) headers['Content-Type'] = 'application/json'
+  let payload: BodyInit | undefined
+  if (body instanceof Blob) {
+    headers['Content-Type'] = body.type || 'application/octet-stream'
+    payload = body
+  } else if (body !== undefined) {
+    headers['Content-Type'] = 'application/json'
+    payload = JSON.stringify(body)
+  }
   let response: Response
   try {
-    response = await fetch(path, {
-      method,
-      headers,
-      body: body === undefined ? undefined : JSON.stringify(body),
-      credentials: 'same-origin',
-    })
+    response = await fetch(path, { method, headers, body: payload, credentials: 'same-origin' })
   } catch {
     throw new ApiError(0, 'network_error', '无法连接到本地服务，请确认 closet-server 正在运行。')
   }
@@ -58,8 +64,19 @@ export async function request<T>(method: Method, path: string, body?: unknown): 
     }
     throw new ApiError(response.status, code, message)
   }
+  return response
+}
+
+export async function request<T>(method: Method, path: string, body?: unknown): Promise<T> {
+  const response = await send(method, path, body)
   if (response.status === 204) return undefined as T
   return (await response.json()) as T
+}
+
+/** 从 Content-Disposition 中取出文件名。 */
+export function fileNameFrom(disposition: string | null, fallback: string): string {
+  const match = disposition ? /filename="([^"]+)"/.exec(disposition) : null
+  return match?.[1] ?? fallback
 }
 
 function query(params: Record<string, string | undefined>): string {
@@ -77,6 +94,7 @@ export const api = {
   items: (filter: { status?: string; category?: string; sort?: 'createdAt' | 'updatedAt' } = {}) =>
     request<ApiList<ApiItem>>('GET', `/api/v1/items${query(filter)}`).then((list) => list.items),
   item: (id: string) => request<ApiItem>('GET', `/api/v1/items/${encodeURIComponent(id)}`),
+  createItem: (item: ItemUpdate) => request<ApiItem>('POST', '/api/v1/items', item),
   updateItem: (id: string, update: ItemUpdate) => request<ApiItem>('PUT', `/api/v1/items/${encodeURIComponent(id)}`, update),
   deleteItem: (id: string) => request<void>('DELETE', `/api/v1/items/${encodeURIComponent(id)}`),
   defaultName: (category: string, subtype: string | null, colorHex: string) =>
@@ -134,6 +152,17 @@ export const api = {
     request<ApiTravelPlan>('GET', `/api/v1/travel/plan${query({ ...params, days: String(params.days) })}`),
   pack: (itemIds: string[]) => request<ApiList<ApiItem>>('POST', '/api/v1/travel/pack', { itemIds }).then((list) => list.items),
   unpackAll: () => request<{ count: number }>('POST', '/api/v1/travel/unpack-all').then((result) => result.count),
+
+  uploadImage: (file: Blob) => request<ApiUploadedImage>('POST', '/api/v1/images', file),
+  processImage: (sha256: string) => request<ApiProcessedImage>('POST', `/api/v1/images/${encodeURIComponent(sha256)}/process`),
+  similarItems: () => request<{ groups: ApiItem[][] }>('GET', '/api/v1/similar-items').then((result) => result.groups),
+
+  exportBackup: async () => {
+    const response = await send('POST', '/api/v1/backup/export')
+    return { blob: await response.blob(), fileName: fileNameFrom(response.headers.get('Content-Disposition'), 'ClosetBackup.wardrobe') }
+  },
+  importBackup: (file: Blob, mode: 'merge' | 'overwrite', apply: boolean) =>
+    request<ApiImportReport>('POST', `/api/v1/backup/import${query({ mode, apply: String(apply) })}`, file),
 
   profile: () => request<ApiProfile>('GET', '/api/v1/settings/profile'),
   updateProfile: (profile: ApiProfile) => request<ApiProfile>('PUT', '/api/v1/settings/profile', profile),

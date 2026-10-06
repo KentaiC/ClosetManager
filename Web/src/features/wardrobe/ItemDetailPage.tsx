@@ -70,6 +70,7 @@ export function ItemDetailPage({ id }: { id: string }) {
         <h1 className="page-title">编辑单品</h1>
         <ItemEditor
           item={data}
+          onSubmit={(update) => api.updateItem(data.id, update)}
           onCancel={() => setEditing(false)}
           onSaved={() => {
             setEditing(false)
@@ -107,7 +108,7 @@ export function ItemDetailPage({ id }: { id: string }) {
         />
       )}
       <div className="detail">
-        <ItemImage item={data} className="detail-image" />
+        <ItemImage item={data} className="detail-image" variant="display" />
         <dl className="fields">
           <Field label="分类">
             {meta.name('category', data.category)}

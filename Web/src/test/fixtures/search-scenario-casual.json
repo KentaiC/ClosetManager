@@ -67,7 +67,8 @@
           "displayable": true,
           "format": "png",
           "url": "/api/v1/items/7A2C1D9E-3B4F-4C5A-9D6E-1F2A3B4C5D6E/image?variant=processed&v=cdb30873bdf16770"
-        }
+        },
+        "thumbnailUrl": "/api/v1/items/7A2C1D9E-3B4F-4C5A-9D6E-1F2A3B4C5D6E/image?variant=thumbnail&v=cdb30873bdf16770"
       },
       "isWaterproof": false,
       "laundryRetentionWarning": false,

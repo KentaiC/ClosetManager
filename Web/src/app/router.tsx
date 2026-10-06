@@ -4,6 +4,8 @@ import { useSyncExternalStore, type AnchorHTMLAttributes, type MouseEvent } from
 export type Route =
   | { name: 'wardrobe' }
   | { name: 'item'; id: string }
+  | { name: 'newItem' }
+  | { name: 'batchImport' }
   | { name: 'laundry' }
   | { name: 'outfits' }
   | { name: 'calendar' }
@@ -32,6 +34,10 @@ export function parseRoute(pathname: string): Route {
       return { name: 'search' }
     case '/travel':
       return { name: 'travel' }
+    case '/items/new':
+      return { name: 'newItem' }
+    case '/items/batch':
+      return { name: 'batchImport' }
   }
   const item = /^\/items\/([0-9A-Fa-f-]{36})$/.exec(path)
   if (item?.[1]) return { name: 'item', id: item[1] }
