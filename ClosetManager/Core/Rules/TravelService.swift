@@ -22,3 +22,18 @@ public enum TravelService {
         days > 4
     }
 }
+
+extension TravelService {
+    /// 打包建议：按行程跑若干套穿搭，取去重后的单品集合，保持首次出现的顺序（与 App 的差旅页面相同）。
+    public static func packingSuggestion<Item: WardrobeItemRepresentable>(from result: OutfitGenerationResult<Item>) -> [Item] {
+        var seen = Set<UUID>()
+        var unique: [Item] = []
+        for draft in result.drafts {
+            for item in draft.allItems where !seen.contains(item.id) {
+                seen.insert(item.id)
+                unique.append(item)
+            }
+        }
+        return unique
+    }
+}
