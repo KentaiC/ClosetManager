@@ -4,7 +4,7 @@ import ClosetStorage
 import ClosetServices
 import Hummingbird
 
-/// 写操作与计算类接口：编辑、删除、穿着与脱下、洗衣、收藏、生成、看板、筛选、差旅、设置。
+/// 写操作与计算类接口：新增、编辑、删除、穿着与脱下、洗衣、收藏、生成、看板、筛选、差旅、设置。
 /// 所有写请求都已经过 `RequestGuardMiddleware` 的来源校验。
 struct WriteRoutes: Sendable {
     let store: ClosetStore
@@ -18,6 +18,7 @@ struct WriteRoutes: Sendable {
     var settings: SettingsService { SettingsService(store: store, now: now) }
 
     func register(on api: RouterGroup<BasicRequestContext>) {
+        api.post("items", use: createItem)
         api.put("items/:id", use: updateItem)
         api.delete("items/:id", use: deleteItem)
         api.get("naming/default-name", use: defaultName)
@@ -44,6 +45,11 @@ struct WriteRoutes: Sendable {
     }
 
     // MARK: - 单品
+
+    @Sendable func createItem(_ request: Request, context: BasicRequestContext) async throws -> EditedResponse<APIItem> {
+        let body = try await request.decode(as: ItemUpdateBody.self, context: context)
+        return EditedResponse(status: .created, response: APIItem(try await items.create(try body.edit()), now: now()))
+    }
 
     @Sendable func updateItem(_ request: Request, context: BasicRequestContext) async throws -> APIItem {
         let id = try APIRoutes.uuidParameter(context)

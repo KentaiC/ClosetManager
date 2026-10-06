@@ -75,6 +75,11 @@ public struct ImageService: Sendable {
         return UploadedImage(ref: ref, width: info.width, height: info.height)
     }
 
+    /// 读取图片文件。
+    public func data(of ref: MediaRef) throws -> Data {
+        try store.media.read(ref)
+    }
+
     /// 查找一张已登记的图片。
     public func media(sha256: String) async throws -> MediaRef {
         guard sha256.count == 64, sha256.allSatisfy({ "0123456789abcdef".contains($0) }),

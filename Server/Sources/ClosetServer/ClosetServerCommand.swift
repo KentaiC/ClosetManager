@@ -47,7 +47,11 @@ struct Serve: AsyncParsableCommand {
         logger.info("Data directory: \(directory.root.path)")
         if removed > 0 { logger.info("Removed \(removed) unreferenced media files") }
         let configuration = ServerConfiguration(port: port, webRoot: webRoot.map { URL(fileURLWithPath: $0, isDirectory: true) })
-        let app = makeApplication(store: store, configuration: configuration, logger: logger)
+        let processor = ImageProcessors.platformDefault
+        if !processor.capabilities.backgroundRemoval {
+            logger.info("Image processing is unavailable on this platform: uploads are stored, but background removal, colour extraction, format conversion and similarity detection need macOS")
+        }
+        let app = makeApplication(store: store, configuration: configuration, processor: processor, logger: logger)
         logger.info("Closet Manager is available at http://\(ServerConfiguration.host):\(port)/")
         try await app.runService()
     }

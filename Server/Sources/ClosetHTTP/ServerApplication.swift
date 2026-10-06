@@ -22,11 +22,13 @@ public struct ServerConfiguration: Sendable {
 ///
 /// 中间件由外到内：安全响应头、错误转 JSON、Host 校验、写请求来源校验。
 /// 它们作用于所有请求，包括未匹配到路由的请求。
+///
+/// - Parameter processor: 图片处理的平台实现。默认不做处理，正式运行时由 `makeApplication` 传入当前平台的实现。
 public func makeRouter(
     store: ClosetStore,
     configuration: ServerConfiguration,
     policy: LoopbackPolicy? = nil,
-    capabilities: APIHealth.Capabilities = .init(backgroundRemoval: false, similarityDetection: false),
+    processor: any ImageProcessor = UnavailableImageProcessor(),
     now: @escaping @Sendable () -> Date = Date.init
 ) -> Router<BasicRequestContext> {
     let policy = policy ?? LoopbackPolicy(port: configuration.port)
@@ -36,12 +38,14 @@ public func makeRouter(
         APIErrorMiddleware()
         HostGuardMiddleware(policy: policy)
         RequestGuardMiddleware(policy: policy)
+        ImageConversionMiddleware(available: processor.capabilities.formatConversion)
     }
     if let webRoot = configuration.webRoot {
         // 静态文件在安全中间件之内处理，同样经过 Host 校验并附加安全响应头。
         router.add(middleware: FileMiddleware(webRoot.path, searchForIndexHtml: true))
     }
-    APIRoutes(store: store, catalog: CatalogService(store: store), capabilities: capabilities, now: now).register(on: router)
+    let images = ImageService(store: store, processor: processor, now: now)
+    APIRoutes(store: store, catalog: CatalogService(store: store), images: images, now: now).register(on: router)
     if let webRoot = configuration.webRoot {
         registerSinglePageFallback(on: router, webRoot: webRoot)
     }
@@ -72,10 +76,11 @@ func registerSinglePageFallback(on router: Router<BasicRequestContext>, webRoot:
 public func makeApplication(
     store: ClosetStore,
     configuration: ServerConfiguration,
+    processor: any ImageProcessor = ImageProcessors.platformDefault,
     logger: Logger = Logger(label: "closet-server")
 ) -> some ApplicationProtocol {
     Application(
-        router: makeRouter(store: store, configuration: configuration),
+        router: makeRouter(store: store, configuration: configuration, processor: processor),
         configuration: .init(address: .hostname(ServerConfiguration.host, port: configuration.port), serverName: "ClosetManager"),
         logger: logger
     )

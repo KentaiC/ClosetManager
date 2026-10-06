@@ -27,6 +27,8 @@ struct ItemUpdateBody: Decodable {
     var brand: String?
     var notes: String?
     var dominantColor: ColorBody
+    /// 新增单品时必填；编辑时只在更换图片时提交。
+    var images: ImagesBody?
 
     func edit() throws -> ItemEdit {
         ItemEdit(
@@ -40,8 +42,16 @@ struct ItemUpdateBody: Decodable {
             isWaterproof: isWaterproof,
             brand: brand,
             notes: notes,
-            dominantColor: dominantColor.storedColor)
+            dominantColor: dominantColor.storedColor,
+            images: images.map { ImageChange(originalSHA256: $0.original, processedSHA256: $0.processed, secondaryColor: $0.secondaryColor?.storedColor) })
     }
+}
+
+/// 单品的图片：上传后得到的哈希，以及抠图取色得到的辅色。
+struct ImagesBody: Decodable {
+    var original: String
+    var processed: String?
+    var secondaryColor: ColorBody?
 }
 
 struct MemberBody: Decodable {

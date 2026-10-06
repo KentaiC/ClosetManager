@@ -11,7 +11,7 @@ public let closetServerVersion = "0.2.0"
 struct APIRoutes: Sendable {
     let store: ClosetStore
     let catalog: CatalogService
-    let capabilities: APIHealth.Capabilities
+    let images: ImageService
     let now: @Sendable () -> Date
 
     func register(on router: Router<BasicRequestContext>) {
@@ -25,13 +25,14 @@ struct APIRoutes: Sendable {
         api.get("wear-records", use: listWearRecords)
         api.get("wear-records/active", use: activeWearRecord)
         WriteRoutes(store: store, catalog: catalog, now: now).register(on: api)
+        ImageRoutes(images: images, now: now).register(on: api)
     }
 
     // MARK: - 处理函数
 
     @Sendable func health(_ request: Request, context: BasicRequestContext) async throws -> APIHealth {
         APIHealth(status: "ok", version: closetServerVersion, schemaVersion: try await store.schemaVersion(),
-                  counts: try await catalog.counts(), capabilities: capabilities)
+                  counts: try await catalog.counts(), capabilities: images.capabilities)
     }
 
     @Sendable func listItems(_ request: Request, context: BasicRequestContext) async throws -> APIList<APIItem> {
@@ -55,32 +56,20 @@ struct APIRoutes: Sendable {
         guard let item = try await catalog.item(id: id) else { throw APIError.notFound("未找到该单品。") }
         let variant = request.uri.queryParameters.get("variant") ?? "display"
         let ref: MediaRef?
+        let kind: MediaVariantKind?
         switch variant {
-        case "display": ref = item.displayImage
-        case "processed": ref = item.processedImage
-        case "original": ref = item.originalImage
+        case "display": (ref, kind) = (item.displayImage, .display)
+        case "thumbnail": (ref, kind) = (item.displayImage, .thumbnail)
+        case "processed": (ref, kind) = (item.processedImage, nil)
+        case "original": (ref, kind) = (item.originalImage, nil)
         default: throw APIError.invalidParameter("variant", variant)
         }
         guard let ref else { throw APIError.notFound("该单品没有这张图片。") }
-
-        let etag = "\"\(ref.sha256)\""
-        var headers: HTTPFields = [.eTag: etag]
-        // URL 中带有内容哈希时可以长期缓存；内容变化后 URL 也会变化。
-        if let version = request.uri.queryParameters.get("v"), ref.sha256.hasPrefix(version), !version.isEmpty {
-            headers[.cacheControl] = "private, max-age=31536000, immutable"
-        } else {
-            headers[.cacheControl] = "no-cache"
-        }
-        if request.headers[.ifNoneMatch] == etag {
-            return Response(status: .notModified, headers: headers)
-        }
-        let data = try store.media.read(ref)
-        headers[.contentType] = ref.format.mimeType
-        if ref.format == .unknown {
-            // 无法识别的数据一律作为附件下载，绝不让浏览器按网页或脚本解释。
-            headers[.contentDisposition] = "attachment; filename=\"\(ref.sha256).bin\""
-        }
-        return Response(status: .ok, headers: headers, body: ResponseBody(byteBuffer: ByteBuffer(bytes: data)))
+        // 展示图与缩略图在需要时换成派生图；原图与抠图结果按存储的字节返回。
+        var served = ref
+        if let kind { served = try await images.servable(ref, kind: kind) }
+        let version = request.uri.queryParameters.get("v") ?? ""
+        return try await ImageResponse.make(served, images: images, request: request, immutable: !version.isEmpty && ref.sha256.hasPrefix(version))
     }
 
     @Sendable func listOutfits(_ request: Request, context: BasicRequestContext) async throws -> APIList<APIOutfit> {

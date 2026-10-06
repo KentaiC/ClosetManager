@@ -26,17 +26,20 @@ public struct APIColor: Codable, Sendable, Equatable {
 }
 
 public struct APIImage: Codable, Sendable, Equatable {
+    /// 当前请求所在服务能否把 HEIC 等格式转换为浏览器可显示的版本，由 `ImageConversionMiddleware` 设置。
+    @TaskLocal static var conversionAvailable = false
+
     public var url: String
     public var format: String
     public var byteCount: Int
-    /// 主流浏览器能否直接显示。HEIC 等格式需要服务端转码后才能显示。
+    /// 浏览器能否显示这个地址返回的图片：格式本身可显示，或服务端会转换后再返回。
     public var displayable: Bool
 
     init(itemID: UUID, variant: String, ref: MediaRef) {
         url = "/api/v1/items/\(itemID.uuidString)/image?variant=\(variant)&v=\(ref.sha256.prefix(16))"
         format = ref.format.rawValue
         byteCount = ref.byteCount
-        displayable = ref.format.isBrowserDisplayable
+        displayable = ref.format.isBrowserDisplayable || Self.conversionAvailable
     }
 }
 
@@ -44,6 +47,8 @@ public struct APIItemImages: Codable, Sendable, Equatable {
     public var display: APIImage?
     public var processed: APIImage?
     public var original: APIImage?
+    /// 列表用的缩略图地址。服务端不能生成缩略图时返回展示图。
+    public var thumbnailUrl: String?
 }
 
 public struct APIItem: Codable, Sendable, Equatable, ResponseEncodable {
@@ -97,7 +102,8 @@ public struct APIItem: Codable, Sendable, Equatable, ResponseEncodable {
         images = APIItemImages(
             display: item.displayImage.map { APIImage(itemID: item.id, variant: "display", ref: $0) },
             processed: item.processedImage.map { APIImage(itemID: item.id, variant: "processed", ref: $0) },
-            original: item.originalImage.map { APIImage(itemID: item.id, variant: "original", ref: $0) })
+            original: item.originalImage.map { APIImage(itemID: item.id, variant: "original", ref: $0) },
+            thumbnailUrl: item.displayImage.map { "/api/v1/items/\(item.id.uuidString)/image?variant=thumbnail&v=\($0.sha256.prefix(16))" })
     }
 }
 
@@ -165,21 +171,56 @@ public struct APIList<Element: Codable & Sendable>: Codable, Sendable, ResponseE
 }
 
 public struct APIHealth: Codable, Sendable, ResponseEncodable {
-    public struct Capabilities: Codable, Sendable {
-        /// 本地抠图（需要 macOS 的 Vision）。
-        public var backgroundRemoval: Bool
-        /// 相似单品检测（需要 macOS 的 Vision）。
-        public var similarityDetection: Bool
-
-        public init(backgroundRemoval: Bool, similarityDetection: Bool) {
-            self.backgroundRemoval = backgroundRemoval
-            self.similarityDetection = similarityDetection
-        }
-    }
-
     public var status: String
     public var version: String
     public var schemaVersion: Int
     public var counts: StoreCounts
-    public var capabilities: Capabilities
+    /// 图片处理能力。抠图、取色、格式转换与相似检测需要 macOS 的图像框架。
+    public var capabilities: ImageCapabilities
+}
+
+/// 一张上传或处理后生成的图片（尚未保存到单品时也可预览）。
+public struct APIUploadedImage: Codable, Sendable, Equatable, ResponseEncodable {
+    public var sha256: String
+    public var format: String
+    public var byteCount: Int
+    public var width: Int?
+    public var height: Int?
+    public var displayable: Bool
+    public var url: String
+    public var thumbnailUrl: String
+
+    init(_ ref: MediaRef, width: Int? = nil, height: Int? = nil) {
+        sha256 = ref.sha256
+        format = ref.format.rawValue
+        byteCount = ref.byteCount
+        self.width = width
+        self.height = height
+        displayable = ref.format.isBrowserDisplayable || APIImage.conversionAvailable
+        url = "/api/v1/images/\(ref.sha256)"
+        thumbnailUrl = "/api/v1/images/\(ref.sha256)?variant=thumbnail"
+    }
+}
+
+/// 抠图与取色的结果。
+public struct APIProcessedImage: Codable, Sendable, ResponseEncodable {
+    public var original: APIUploadedImage
+    public var processed: APIUploadedImage?
+    public var dominantColor: APIColor?
+    public var secondaryColor: APIColor?
+    /// 抠图失败时的提示。失败时仍可保存，与 App 相同。
+    public var failure: String?
+
+    init(_ result: ProcessedImage) {
+        original = APIUploadedImage(result.original)
+        processed = result.processed.map { APIUploadedImage($0) }
+        dominantColor = result.colors.map { APIColor($0.dominant) }
+        secondaryColor = result.colors?.secondary.map(APIColor.init)
+        failure = result.failure
+    }
+}
+
+/// 相似单品组。
+public struct APISimilarGroups: Codable, Sendable, ResponseEncodable {
+    public var groups: [[APIItem]]
 }
