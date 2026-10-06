@@ -19,7 +19,7 @@ export default defineConfig({
     trace: 'retain-on-failure',
   },
   projects: [
-    { name: 'read-only', testMatch: /wardrobe\.spec\.ts$/ },
+    { name: 'read-only', testMatch: /(wardrobe|responsive)\.spec\.ts$/ },
     { name: 'workflows', testMatch: /workflows\.spec\.ts$/, dependencies: ['read-only'] },
   ],
   webServer: {
