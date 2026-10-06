@@ -36,8 +36,35 @@ public func makeRouter(
         HostGuardMiddleware(policy: policy)
         RequestGuardMiddleware(policy: policy)
     }
+    if let webRoot = configuration.webRoot {
+        // 静态文件在安全中间件之内处理，同样经过 Host 校验并附加安全响应头。
+        router.add(middleware: FileMiddleware(webRoot.path, searchForIndexHtml: true))
+    }
     APIRoutes(store: store, catalog: CatalogService(store: store), capabilities: capabilities).register(on: router)
+    if let webRoot = configuration.webRoot {
+        registerSinglePageFallback(on: router, webRoot: webRoot)
+    }
     return router
+}
+
+/// 前端路由的深链接（如 /laundry、/items/<id>）回退到 index.html，由前端决定显示哪个页面。
+/// API 路径与带扩展名的文件路径不回退，缺失时如实返回 404。
+func registerSinglePageFallback(on router: Router<BasicRequestContext>, webRoot: URL) {
+    let index = webRoot.appendingPathComponent("index.html")
+    router.get("**") { request, _ -> Response in
+        let path = request.uri.path
+        let lastComponent = path.split(separator: "/").last ?? ""
+        guard !path.hasPrefix("/api/"), !lastComponent.contains(".") else {
+            throw APIError.notFound()
+        }
+        guard let html = try? Data(contentsOf: index) else {
+            throw APIError(.notFound, code: "web_ui_missing", message: "未找到前端页面，请先构建 Web 目录。")
+        }
+        return Response(
+            status: .ok,
+            headers: [.contentType: "text/html; charset=utf-8"],
+            body: ResponseBody(byteBuffer: ByteBuffer(bytes: html)))
+    }
 }
 
 /// 构建可运行的服务端应用。

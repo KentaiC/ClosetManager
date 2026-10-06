@@ -129,8 +129,14 @@ public struct SecurityHeadersMiddleware<Context: RequestContext>: RouterMiddlewa
         response.headers[HTTPField.Name("Referrer-Policy")!] = "no-referrer"
         response.headers[HTTPField.Name("Cross-Origin-Opener-Policy")!] = "same-origin"
         response.headers[HTTPField.Name("Cross-Origin-Resource-Policy")!] = "same-origin"
-        if request.uri.path.hasPrefix("/api/"), response.headers[.cacheControl] == nil {
-            response.headers[.cacheControl] = "no-store"
+        let path = request.uri.path
+        if path.hasPrefix("/api/") {
+            if response.headers[.cacheControl] == nil { response.headers[.cacheControl] = "no-store" }
+        } else if path.hasPrefix("/assets/"), response.status == .ok {
+            // 前端构建产物的文件名含内容哈希，可以长期缓存。
+            response.headers[.cacheControl] = "public, max-age=31536000, immutable"
+        } else if response.headers[.cacheControl] == nil {
+            response.headers[.cacheControl] = "no-cache"
         }
         return response
     }
