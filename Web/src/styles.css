@@ -13,6 +13,7 @@
   --laundry: #2471a3;
   --heat-empty: rgba(142, 142, 147, 0.15);
   --radius: 16px;
+  --tabbar-height: calc(52px + env(safe-area-inset-bottom));
   font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', 'Noto Sans CJK SC', sans-serif;
   color: var(--text);
   background: var(--bg);
@@ -77,10 +78,10 @@ button { font: inherit; }
 /* 窄屏：导航移到底部，与 App 的 Tab 栏一致。 */
 @media (max-width: 640px) {
   .tabs {
-    position: fixed; bottom: 0; left: 0; right: 0; justify-content: space-around;
-    padding: 6px 8px calc(6px + env(safe-area-inset-bottom)); background: var(--surface); border-top: 1px solid var(--border);
+    position: fixed; bottom: 0; left: 0; right: 0; justify-content: space-around; align-items: center;
+    height: var(--tabbar-height); padding: 0 8px env(safe-area-inset-bottom); background: var(--surface); border-top: 1px solid var(--border);
   }
-  .app-main { padding-bottom: 80px; }
+  .app-main { padding-bottom: calc(var(--tabbar-height) + 24px); }
   .brand { flex: 1; }
 }
 
@@ -181,7 +182,7 @@ fieldset.form legend, .form fieldset legend { font-weight: 600; padding: 0 6px; 
 .form fieldset { border: 0; padding: 0; margin: 0; min-width: 0; }
 .form-row { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 12px; padding: 8px 0; }
 .form-row > span:first-child { color: var(--text-muted); }
-.form-row input[type='text'], .form-row input[type='number'], .form-row select, .form-row textarea {
+.form-row input:not([type]), .form-row input[type='text'], .form-row input[type='number'], .form-row select, .form-row textarea {
   font: inherit; color: var(--text); background: var(--surface-muted); border: 1px solid var(--border); border-radius: 8px; padding: 6px 10px; min-width: 0; max-width: 100%;
 }
 .form-row textarea { width: 100%; min-height: 4.5em; }
@@ -273,3 +274,8 @@ fieldset.form legend, .form fieldset legend { font-weight: 600; padding: 0 6px; 
 .similar-item { display: flex; flex-direction: column; align-items: center; gap: 6px; width: 96px; flex: 0 0 96px; }
 .similar-item .thumb { width: 96px; flex-basis: 96px; }
 .similar-name { font-size: 0.8rem; max-width: 96px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* 手机上底部有固定的标签栏，底部操作条停在它上方，不被遮住。 */
+@media (max-width: 640px) {
+  .sticky-actions { bottom: var(--tabbar-height); }
+}
