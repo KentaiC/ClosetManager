@@ -17,3 +17,6 @@ SwiftUI · SwiftData · Vision · CoreImage · Swift Charts · PhotosUI
 
 ## Run
 Xcode 26+ / iOS 17+. Open in Xcode and select your own Team under `Target → Signing & Capabilities` to run on a device (the repo ships no development team ID). Vision background removal is best tested on a real device — the Simulator may not support it.
+
+## Local web version
+The repository also contains a version you use in a browser on your own computer. It shares the App's business rules and exchanges data with it through `.wardrobe` backup files. Run `scripts/closet` from the repository root to build and start it; on macOS 14 or later it also offers background removal, colour extraction and similar-item detection. See the [local web guide](docs/LOCAL_WEB.zh-CN.md) (Chinese) for requirements, importing App data, ports, data location and backups.

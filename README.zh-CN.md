@@ -17,3 +17,6 @@ SwiftUI · SwiftData · Vision · CoreImage · Swift Charts · PhotosUI
 
 ## 运行
 Xcode 26+ / iOS 17+。克隆后在 Xcode 打开，于 `Target → Signing & Capabilities` 选择你自己的 Team 即可在真机运行（仓库未包含开发者团队 ID）。Vision 抠图建议用真机测试（模拟器可能不支持）。
+
+## 本地 Web 版
+仓库同时包含一个在本机浏览器中使用的版本，与 App 共用同一套业务规则，通过 `.wardrobe` 备份文件交换数据。在仓库根目录运行 `scripts/closet` 即可启动，详见 [本地 Web 版使用指南](docs/LOCAL_WEB.zh-CN.md)，迁移过程记录在 [docs/WEB_MIGRATION.zh-CN.md](docs/WEB_MIGRATION.zh-CN.md)。
