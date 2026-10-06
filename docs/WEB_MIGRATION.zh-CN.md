@@ -69,7 +69,29 @@ swift run closet-server import 备份.wardrobe --data-dir ./data --apply    # �
 swift run closet-server serve --data-dir ./data --port 8765
 ```
 
-## 6. 阶段进度
+## 6. 前端结构
+
+```text
+Web/
+  src/api        API 客户端、与服务端对应的类型、资源加载 hook
+  src/app        路由、元数据查找、反馈组件、浏览器本地偏好
+  src/features   按页面划分的功能，与 App 的 Views 目录一一对应
+  e2e            Playwright 端到端测试
+```
+
+前端不定义任何枚举的中文名称或业务阈值，全部来自 `/api/v1/meta`。界面偏好（如网格大小）只保存在当前浏览器，键名沿用 App 的 `@AppStorage` 键。
+
+开发与测试命令如下。
+
+```bash
+cd Web && npm ci
+npm run dev        # Vite 开发服务器，/api 转发到 127.0.0.1:8765
+npm test           # 单元测试
+npm run build      # 类型检查并构建到 Web/dist
+npm run e2e        # 启动 closet-server（导入样例备份）并用 Chromium 测试
+```
+
+## 7. 阶段进度
 
 ### 第一阶段 Architecture preparation
 
@@ -94,3 +116,14 @@ swift run closet-server serve --data-dir ./data --port 8765
 验证结果。Linux 上 `swift test` 共 98 个测试全部通过。替代验证环境中，App 的备份导出在改动前后语义一致，导出后覆盖导入再导出内容不变；App 导出的文件被服务端导入器完整读取。真实运行时，伪造 Host 头的请求返回 403，缺少客户端头的写请求返回 403，非回环地址无法连接。
 
 遗留问题如下。导入时整个备份文件会读入内存，与 App 相同，体积很大的备份需要改为流式解析。Linux 上没有 Vision，服务端在 Linux 运行时不具备抠图与相似检测能力，`/api/v1/health` 中的 `capabilities` 如实返回。HEIC 原图在多数浏览器中无法显示，转码放在第五阶段。目前 API 只读。
+
+### 第三阶段 Web UI foundation
+
+| 提交 | 内容 |
+|---|---|
+| `feat(server): serve the web UI with single-page fallback` | 服务端托管 `Web/dist`，深链接回退到 `index.html`，静态资源缓存策略 |
+| `feat(web): add the Web UI foundation with a read-only wardrobe` | 前端工程、API 客户端、路由、外壳、衣橱只读页面、单品只读详情、单元测试与端到端测试、CI |
+
+验证结果。Swift 测试 103 个、前端单元测试 24 个、端到端测试 6 个全部通过。端到端测试在 Chromium 中运行真实服务，期间页面没有脚本错误，也没有 CSP 拦截。
+
+遗留问题如下。洗衣房、穿搭、日历、看板、设置仍是占位页面，第四阶段迁移。本容器内通过 Docker 包装启动服务时，测试结束后容器不会自动退出，需要手动清理；直接运行 `swift run` 不受影响，CI 中增加了清理步骤。
