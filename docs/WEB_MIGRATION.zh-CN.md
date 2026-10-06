@@ -45,8 +45,17 @@ Core 只允许依赖 Foundation。SwiftUI 桥接放在 App 内，例如 `ClosetM
 | 编号 | 调整 | 原因 |
 |---|---|---|
 | R1 | Apple 工具链上的编译验证延后，改用 Linux 验证环境作为替代 | 本会话推送到 GitHub 时返回 403，CI 无法触发。替代验证把 Core 与剥离 SwiftData 宏的模型文件编进同一模块做类型检查，并把重构前后的算法放在同一随机序列下逐项比较 |
-| R2 | 行为缺陷修复单独成轨，不混入迁移阶段 | 迁移要求保持现有功能与数据含义。审计报告中的 H-01、H-02、H-03、M-01、M-04、M-05、M-07 等问题保持现状，已有特征测试的会在修复时显式改变断言。修复放在共享核心中进行，App 与 Web 同时生效 |
+| R2 | 行为缺陷修复单独成轨，不混入迁移阶段 | 迁移要求保持现有功能与数据含义。审计报告中的 H-01、H-02、H-03、M-01、M-04、M-07、M-17 等问题保持现状，已有特征测试的会在修复时显式改变断言。修复放在共享核心中进行，App 与 Web 同时生效。例外见 R4 |
 | R3 | 审计报告 Phase 0 中的「测试与 CI」提前到第一阶段完成 | 后续每一步都需要回归基线 |
+| R4 | Web 版只在两种情况下与 App 行为不同 | 一是安全需要。二是 App 写入的数据与模型注释定义的含义矛盾。其余一律与 App 一致，差异逐条列在下表 |
+
+Web 版与 App 的有意差异如下。界面形式上的差异，例如删除前增加确认对话框，不在此列。
+
+| 位置 | App 的行为 | Web 版的行为 | 依据 |
+|---|---|---|---|
+| 备份导入 | 无法识别的枚举值静默替换为默认值 | 整个文件拒绝导入并报告位置 | D8，审计 M-02 |
+| 自由拼搭收藏 | 来源记为「算法生成」 | 来源记为「手动拼搭」 | `OutfitSource` 的定义，审计 M-05 |
+| 智能生成收藏 | 记录点击收藏时界面上的场景与保暖档位 | 记录生成这批草稿时的条件 | `Outfit.targetScenario` 注释为「生成时的目标场景」 |
 
 ## 5. 服务端结构
 
@@ -54,7 +63,7 @@ Core 只允许依赖 Foundation。SwiftUI 桥接放在 App 内，例如 `ClosetM
 Server/Sources/
   CSQLite          Linux 上的系统 SQLite 模块映射
   ClosetStorage    SQLite 封装、迁移、存储 actor、按内容寻址的图片存储
-  ClosetServices   应用服务：备份导入、只读查询
+  ClosetServices   应用服务：备份导入、查询、单品编辑、穿着流转、穿搭、看板与筛选、差旅、设置
   ClosetHTTP       Hummingbird 路由、API 模型、安全中间件
   ClosetServer     命令行入口 closet-server
 ```
@@ -73,13 +82,18 @@ swift run closet-server serve --data-dir ./data --port 8765
 
 ```text
 Web/
-  src/api        API 客户端、与服务端对应的类型、资源加载 hook
-  src/app        路由、元数据查找、反馈组件、浏览器本地偏好
-  src/features   按页面划分的功能，与 App 的 Views 目录一一对应
-  e2e            Playwright 端到端测试
+  src/api         API 客户端、与服务端对应的类型、资源加载 hook
+  src/app         路由、元数据查找、反馈组件、对话框、提示、数据版本、外观与本地偏好
+  src/components  跨页面复用的组件，如胶囊选择组与缩略图行
+  src/features    按页面划分的功能，与 App 的 Views 目录一一对应
+  e2e             Playwright 端到端测试
 ```
 
-前端不定义任何枚举的中文名称或业务阈值，全部来自 `/api/v1/meta`。界面偏好（如网格大小）只保存在当前浏览器，键名沿用 App 的 `@AppStorage` 键。
+前端不定义任何枚举的中文名称或业务阈值，全部来自 `/api/v1/meta`。界面偏好只保存在当前浏览器，键名沿用 App 的 `@AppStorage` 键，包括 `galleryItemSize`、`ui.accent`、`ui.appearance`、`ui.cornerRadius`。个人资料属于数据，保存在服务端。
+
+写操作成功后调用 `useDataVersion().invalidate()`，所有依赖数据版本的页面重新加载。这对应 App 中 SwiftData 的 `@Query` 在数据变化后自动刷新。
+
+端到端测试分两个 Playwright 项目。`read-only` 只读取样例数据；`workflows` 依赖它，按顺序修改同一份数据，模拟一次完整使用。
 
 开发与测试命令如下。
 
@@ -127,3 +141,27 @@ npm run e2e        # 启动 closet-server（导入样例备份）并用 Chromium
 验证结果。Swift 测试 103 个、前端单元测试 24 个、端到端测试 6 个全部通过。端到端测试在 Chromium 中运行真实服务，期间页面没有脚本错误，也没有 CSP 拦截。
 
 遗留问题如下。洗衣房、穿搭、日历、看板、设置仍是占位页面，第四阶段迁移。本容器内通过 Docker 包装启动服务时，测试结束后容器不会自动退出，需要手动清理；直接运行 `swift run` 不受影响，CI 中增加了清理步骤。
+
+### 第四阶段 Existing functionality migration
+
+| 提交 | 内容 |
+|---|---|
+| `feat(core): add lifecycle, packing and search rules for the server` | 状态流转、打包建议、高级筛选规则移入共享核心 |
+| `feat(server): migrate the app's write and computed features to the API` | 写接口与计算接口：单品编辑与删除、穿着、脱下、洗净、收藏、生成、看板、筛选、差旅、个人资料 |
+| `feat(server): expose warmth level score ranges in API metadata` | 元数据增加每个保暖档位的分数范围，前端不再重复阈值 |
+| `feat(web): wear lifecycle, laundry, calendar and item editing` | 脱下穿搭、洗衣房、日历、单品编辑与删除，以及 API 客户端、数据版本、对话框、提示等公共部分 |
+| `feat(web): outfits, dashboard, search, travel and settings pages` | 穿搭三个子页、看板、高级筛选、差旅打包、设置 |
+| `test(web): end-to-end workflows against the real server` | 在真实服务上按顺序走完一次完整使用流程 |
+
+验证结果。Swift 测试 135 个、前端单元测试 88 个、端到端测试 15 个全部通过。端到端测试期间页面没有脚本错误、控制台错误或 CSP 拦截。两个前端提交分别单独做过类型检查、单元测试与构建。界面在 1200 与 390 像素宽度、浅色与深色模式下截图检查过。
+
+App 中除下列功能外，其余页面均已可在浏览器中使用。
+
+| 尚未迁移 | 原因 | 计划 |
+|---|---|---|
+| 单件录入、相册与文件批量录入 | 依赖图片上传与处理 | 第五阶段 |
+| 编辑页的图片区 | 同上 | 第五阶段 |
+| 生成、分享与导入备份 | 依赖浏览器文件上传与下载 | 第五阶段。目前可用 `closet-server import` 导入 |
+| 清理相似衣物 | 依赖 Vision，只在 macOS 上可用 | 第五阶段，Linux 上按 `capabilities` 隐藏 |
+
+遗留问题如下。App 侧的 `WearService`、`TravelCapsuleView`、`WardrobeSearchView` 仍使用各自的实现，尚未改为调用共享核心中的同名规则。两者的一致性已在替代验证环境中比较过，切换需要先在 Apple 工具链上编译验证，见 R1。看板热力图与日历按自然日汇总，服务端用本机日历，浏览器用本地时区，两者在同一台电脑上一致。若将来允许从其他设备访问，需要改为由浏览器传入时区。多个浏览器标签页之间不会实时同步，切换页面或重新打开时才会刷新。样例备份中的下装没有适用场景，未改动的样例无法生成穿搭，端到端测试先在编辑页补上场景再生成，这与审计 H-01 一致。
