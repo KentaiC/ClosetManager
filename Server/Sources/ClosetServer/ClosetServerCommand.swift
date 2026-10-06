@@ -32,27 +32,56 @@ struct Serve: AsyncParsableCommand {
 
     @OptionGroup var data: DataDirectoryOption
 
-    @Option(help: "监听端口。")
-    var port = 8765
+    @Option(help: "监听端口。不指定时使用 8765，被占用则依次尝试 8766 到 8774。")
+    var port: Int?
 
-    @Option(name: .customLong("web-root"), help: "前端构建产物目录。")
+    @Option(name: .customLong("web-root"), help: "前端构建产物目录。不指定时依次查找环境变量 CLOSET_WEB_ROOT 与当前目录下的 Web/dist。")
     var webRoot: String?
+
+    @Flag(help: "服务启动后在默认浏览器中打开。")
+    var open = false
+
+    func validate() throws {
+        if let port, !(1...65535).contains(port) { throw ValidationError("--port 必须在 1 到 65535 之间。") }
+    }
 
     func run() async throws {
         var logger = Logger(label: "closet-server")
         logger.logLevel = .info
         let directory = data.directory
+        let web: URL?
+        let chosenPort: Int
+        do {
+            web = try WebRootLocator.locate(
+                explicit: webRoot, environment: ProcessInfo.processInfo.environment,
+                currentDirectory: URL(fileURLWithPath: FileManager.default.currentDirectoryPath, isDirectory: true))
+            chosenPort = try PortSelector.choose(requested: port, isAvailable: PortSelector.isAvailable)
+        } catch let error as CustomStringConvertible & Error {
+            Console.error(error.description)
+            throw ExitCode(1)
+        }
         let store = try ClosetStore(directory: directory)
         let removed = try await store.collectUnreferencedMedia()
         logger.info("Data directory: \(directory.root.path)")
         if removed > 0 { logger.info("Removed \(removed) unreferenced media files") }
-        let configuration = ServerConfiguration(port: port, webRoot: webRoot.map { URL(fileURLWithPath: $0, isDirectory: true) })
+        if web == nil { logger.warning("Web UI not found; serving the API only. Build it with: cd Web && npm ci && npm run build") }
         let processor = ImageProcessors.platformDefault
         if !processor.capabilities.backgroundRemoval {
             logger.info("Image processing is unavailable on this platform: uploads are stored, but background removal, colour extraction, format conversion and similarity detection need macOS")
         }
-        let app = makeApplication(store: store, configuration: configuration, processor: processor, logger: logger)
-        logger.info("Closet Manager is available at http://\(ServerConfiguration.host):\(port)/")
+        let configuration = ServerConfiguration(port: chosenPort, webRoot: web)
+        let address = URL(string: "http://\(ServerConfiguration.host):\(chosenPort)/")!
+        let shouldOpen = open
+        let app = makeApplication(store: store, configuration: configuration, processor: processor, logger: logger) {
+            Console.say("Closet Manager 已启动：\(address.absoluteString)")
+            if chosenPort != PortSelector.defaultPort, port == nil {
+                Console.say("默认端口 \(PortSelector.defaultPort) 已被占用，改用 \(chosenPort)。浏览器中的界面偏好按端口分别保存。")
+            }
+            Console.say("按 Ctrl-C 停止。")
+            if shouldOpen, web != nil, !BrowserOpener.open(address) {
+                Console.say("无法自动打开浏览器，请手动访问上面的地址。")
+            }
+        }
         try await app.runService()
     }
 }
@@ -108,5 +137,16 @@ struct Import: AsyncParsableCommand {
         for issue in report.errors { lines.append("错误 [\(issue.code.rawValue)] \(issue.entity ?? "") \(issue.id ?? "")：\(issue.message)") }
         for issue in report.warnings { lines.append("警告 [\(issue.code.rawValue)] \(issue.entity ?? "") \(issue.id ?? "")：\(issue.message)") }
         return lines.joined(separator: "\n")
+    }
+}
+
+/// 面向使用者的提示。直接写入文件描述符，输出被重定向时也会立即出现。
+enum Console {
+    static func say(_ line: String) {
+        FileHandle.standardOutput.write(Data((line + "\n").utf8))
+    }
+
+    static func error(_ line: String) {
+        FileHandle.standardError.write(Data(("错误：" + line + "\n").utf8))
     }
 }

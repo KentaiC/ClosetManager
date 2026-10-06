@@ -73,15 +73,19 @@ func registerSinglePageFallback(on router: Router<BasicRequestContext>, webRoot:
 }
 
 /// 构建可运行的服务端应用。
+///
+/// - Parameter onServerRunning: 开始监听后调用，用于打印地址或打开浏览器。
 public func makeApplication(
     store: ClosetStore,
     configuration: ServerConfiguration,
     processor: any ImageProcessor = ImageProcessors.platformDefault,
-    logger: Logger = Logger(label: "closet-server")
+    logger: Logger = Logger(label: "closet-server"),
+    onServerRunning: @escaping @Sendable () async -> Void = {}
 ) -> some ApplicationProtocol {
     Application(
         router: makeRouter(store: store, configuration: configuration, processor: processor),
         configuration: .init(address: .hostname(ServerConfiguration.host, port: configuration.port), serverName: "ClosetManager"),
+        onServerRunning: { _ in await onServerRunning() },
         logger: logger
     )
 }
