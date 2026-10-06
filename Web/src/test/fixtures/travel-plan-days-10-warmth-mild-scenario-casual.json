@@ -1,0 +1,12 @@
+{
+  "days": 10,
+  "missingRequired": [
+    "bottom",
+    "shoes"
+  ],
+  "packingCap": 5,
+  "showsCapHint": true,
+  "socksCount": 5,
+  "suggestion": [],
+  "underwearCount": 5
+}

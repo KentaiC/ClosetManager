@@ -5,6 +5,7 @@ import { EmptyState, ErrorPanel, Loading } from '../../app/Feedback'
 import { useDataVersion } from '../../app/dataVersion'
 import { useMeta } from '../../app/meta'
 import { loadGallerySize, saveGallerySize, type GallerySize } from '../../app/preferences'
+import { Link } from '../../app/router'
 import { ActiveOutfitPanel } from './ActiveOutfitPanel'
 import { ItemCard } from './ItemCard'
 import { visibleGalleryItems } from './galleryFilter'
@@ -53,6 +54,9 @@ export function WardrobePage() {
           <input type="checkbox" checked={showLaundry} onChange={(event) => setShowLaundry(event.target.checked)} />
           显示洗衣袋内衣物
         </label>
+        <Link to="/search" className="button">
+          高级筛选
+        </Link>
       </div>
       {showLaundry && <p className="notice">正在显示洗衣袋内衣物</p>}
 

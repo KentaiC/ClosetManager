@@ -1,0 +1,54 @@
+{
+  "colorFrequency": [
+    {
+      "colorCategory": "white",
+      "count": 2
+    },
+    {
+      "colorCategory": "blue",
+      "count": 1
+    },
+    {
+      "colorCategory": "brown",
+      "count": 1
+    }
+  ],
+  "colorInventory": [
+    {
+      "colorCategory": "brown",
+      "count": 1
+    },
+    {
+      "colorCategory": "blue",
+      "count": 1
+    },
+    {
+      "colorCategory": "white",
+      "count": 1
+    }
+  ],
+  "dailyActivity": [
+    {
+      "count": 1,
+      "date": "2026-06-24"
+    },
+    {
+      "count": 1,
+      "date": "2026-07-01"
+    }
+  ],
+  "inventory": [
+    {
+      "category": "top",
+      "count": 1
+    },
+    {
+      "category": "bottom",
+      "count": 1
+    },
+    {
+      "category": "shoes",
+      "count": 1
+    }
+  ]
+}

@@ -5,20 +5,28 @@ import { DataVersionProvider } from './app/dataVersion'
 import { MetaLookup, MetaProvider } from './app/meta'
 import { Link, useRoute, type Route } from './app/router'
 import { ToastProvider } from './app/toast'
+import { AnalyticsPage } from './features/analytics/AnalyticsPage'
 import { CalendarPage } from './features/calendar/CalendarPage'
 import { LaundryPage } from './features/laundry/LaundryPage'
+import { OutfitsPage } from './features/outfits/OutfitsPage'
 import { ComingSoon } from './features/placeholder/ComingSoon'
+import { SearchPage } from './features/search/SearchPage'
+import { SettingsPage } from './features/settings/SettingsPage'
+import { TravelPage } from './features/travel/TravelPage'
 import { ItemDetailPage } from './features/wardrobe/ItemDetailPage'
 import { WardrobePage } from './features/wardrobe/WardrobePage'
 
 /** 主导航，与 App 底部的五个 Tab 一一对应。 */
 const TABS: { to: string; label: string; matches: Route['name'][] }[] = [
-  { to: '/', label: '衣橱', matches: ['wardrobe', 'item'] },
+  { to: '/', label: '衣橱', matches: ['wardrobe', 'item', 'search'] },
   { to: '/laundry', label: '洗衣房', matches: ['laundry'] },
   { to: '/outfits', label: '穿搭', matches: ['outfits'] },
   { to: '/calendar', label: '日历', matches: ['calendar'] },
   { to: '/analytics', label: '看板', matches: ['analytics'] },
 ]
+
+/** 从设置页进入的页面，导航时高亮「设置」。 */
+const SETTINGS_ROUTES: Route['name'][] = ['settings', 'travel']
 
 function Page({ route }: { route: Route }) {
   switch (route.name) {
@@ -29,13 +37,17 @@ function Page({ route }: { route: Route }) {
     case 'laundry':
       return <LaundryPage />
     case 'outfits':
-      return <ComingSoon title="穿搭" />
+      return <OutfitsPage />
     case 'calendar':
       return <CalendarPage />
     case 'analytics':
-      return <ComingSoon title="看板" />
+      return <AnalyticsPage />
     case 'settings':
-      return <ComingSoon title="设置" />
+      return <SettingsPage />
+    case 'search':
+      return <SearchPage />
+    case 'travel':
+      return <TravelPage />
     case 'notFound':
       return <ComingSoon title="页面不存在" />
   }
@@ -65,7 +77,7 @@ export function App() {
                 </Link>
               ))}
             </nav>
-            <Link to="/settings" className={`settings-link${route.name === 'settings' ? ' active' : ''}`} aria-label="设置">
+            <Link to="/settings" className={`settings-link${SETTINGS_ROUTES.includes(route.name) ? ' active' : ''}`} aria-label="设置">
               设置
             </Link>
           </header>

@@ -9,6 +9,8 @@ export type Route =
   | { name: 'calendar' }
   | { name: 'analytics' }
   | { name: 'settings' }
+  | { name: 'search' }
+  | { name: 'travel' }
   | { name: 'notFound' }
 
 export function parseRoute(pathname: string): Route {
@@ -26,6 +28,10 @@ export function parseRoute(pathname: string): Route {
       return { name: 'analytics' }
     case '/settings':
       return { name: 'settings' }
+    case '/search':
+      return { name: 'search' }
+    case '/travel':
+      return { name: 'travel' }
   }
   const item = /^\/items\/([0-9A-Fa-f-]{36})$/.exec(path)
   if (item?.[1]) return { name: 'item', id: item[1] }

@@ -1,9 +1,27 @@
 // 测试样例来自真实运行的 closet-server（导入 Tests/Fixtures/wardrobe-v1-sample.wardrobe 后抓取）。
-import type { ApiItem, ApiMeta, ApiOutfit, ApiWearRecord } from '../api/types'
+// 样例中的下装没有适用场景，生成器无法给出草稿。outfit-suggestions-drafts.json 是在临时数据副本上
+// 把下装洗净放回、取出行李箱、并把它的场景设为「休闲」后抓取的，所以其中下装的名称与 items.json 不同。
+import type {
+  ApiAnalytics,
+  ApiItem,
+  ApiMeta,
+  ApiOutfit,
+  ApiProfile,
+  ApiSuggestions,
+  ApiTravelPlan,
+  ApiWearRecord,
+} from '../api/types'
+import analyticsJSON from './fixtures/analytics.json'
 import laundryJSON from './fixtures/items-status-inLaundry-sort-updatedAt.json'
 import itemsJSON from './fixtures/items.json'
 import metaJSON from './fixtures/meta.json'
+import draftsJSON from './fixtures/outfit-suggestions-drafts.json'
+import missingJSON from './fixtures/outfit-suggestions-missing.json'
 import outfitsJSON from './fixtures/outfits.json'
+import searchJSON from './fixtures/search-scenario-casual.json'
+import profileJSON from './fixtures/settings-profile.json'
+import travel10JSON from './fixtures/travel-plan-days-10-warmth-mild-scenario-casual.json'
+import travel3JSON from './fixtures/travel-plan-days-3-warmth-mild-scenario-casual.json'
 import activeJSON from './fixtures/wear-records-active.json'
 import wearRecordsJSON from './fixtures/wear-records.json'
 
@@ -13,6 +31,13 @@ export const laundryFixture = (laundryJSON as { items: ApiItem[] }).items
 export const outfitsFixture = (outfitsJSON as { items: ApiOutfit[] }).items
 export const activeFixture = (activeJSON as { record: ApiWearRecord }).record
 export const wearRecordsFixture = (wearRecordsJSON as { items: ApiWearRecord[] }).items
+export const analyticsFixture = analyticsJSON as ApiAnalytics
+export const draftsFixture = draftsJSON as ApiSuggestions
+export const missingFixture = missingJSON as ApiSuggestions
+export const searchCasualFixture = (searchJSON as { items: ApiItem[] }).items
+export const profileFixture = profileJSON as ApiProfile
+export const travel3Fixture = travel3JSON as ApiTravelPlan
+export const travel10Fixture = travel10JSON as ApiTravelPlan
 
 /** 按标题取样例单品。 */
 export function fixtureItem(title: string): ApiItem {

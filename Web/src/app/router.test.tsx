@@ -11,6 +11,8 @@ describe('parseRoute', () => {
     expect(parseRoute('/calendar')).toEqual({ name: 'calendar' })
     expect(parseRoute('/analytics')).toEqual({ name: 'analytics' })
     expect(parseRoute('/settings')).toEqual({ name: 'settings' })
+    expect(parseRoute('/search')).toEqual({ name: 'search' })
+    expect(parseRoute('/travel')).toEqual({ name: 'travel' })
     expect(parseRoute('/items/7A2C1D9E-3B4F-4C5A-9D6E-1F2A3B4C5D6E')).toEqual({
       name: 'item',
       id: '7A2C1D9E-3B4F-4C5A-9D6E-1F2A3B4C5D6E',
