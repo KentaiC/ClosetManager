@@ -1,0 +1,439 @@
+{
+  "categories": [
+    {
+      "displayName": "外套",
+      "isRequiredInOutfit": false,
+      "subtypes": [
+        {
+          "displayName": "夹克",
+          "value": "jacket"
+        },
+        {
+          "displayName": "风衣",
+          "value": "trenchCoat"
+        },
+        {
+          "displayName": "大衣",
+          "value": "overcoat"
+        },
+        {
+          "displayName": "羽绒服",
+          "value": "downJacket"
+        },
+        {
+          "displayName": "棉服",
+          "value": "paddedJacket"
+        },
+        {
+          "displayName": "皮衣",
+          "value": "leatherJacket"
+        },
+        {
+          "displayName": "西装外套",
+          "value": "blazer"
+        },
+        {
+          "displayName": "针织开衫",
+          "value": "cardigan"
+        },
+        {
+          "displayName": "马甲",
+          "value": "vest"
+        }
+      ],
+      "value": "outerwear",
+      "washByDefaultOnTakeOff": false
+    },
+    {
+      "displayName": "上装",
+      "isRequiredInOutfit": true,
+      "subtypes": [
+        {
+          "displayName": "T恤",
+          "value": "tee"
+        },
+        {
+          "displayName": "Polo衫",
+          "value": "polo"
+        },
+        {
+          "displayName": "衬衫",
+          "value": "shirt"
+        },
+        {
+          "displayName": "卫衣",
+          "value": "hoodie"
+        },
+        {
+          "displayName": "毛衣",
+          "value": "sweater"
+        },
+        {
+          "displayName": "背心",
+          "value": "tankTop"
+        },
+        {
+          "displayName": "打底衫",
+          "value": "baseLayer"
+        },
+        {
+          "displayName": "西装",
+          "value": "suit"
+        }
+      ],
+      "value": "top",
+      "washByDefaultOnTakeOff": true
+    },
+    {
+      "displayName": "下装",
+      "isRequiredInOutfit": true,
+      "subtypes": [
+        {
+          "displayName": "牛仔裤",
+          "value": "jeans"
+        },
+        {
+          "displayName": "休闲裤",
+          "value": "casualPants"
+        },
+        {
+          "displayName": "西裤",
+          "value": "dressPants"
+        },
+        {
+          "displayName": "运动裤",
+          "value": "sweatpants"
+        },
+        {
+          "displayName": "短裤",
+          "value": "shorts"
+        },
+        {
+          "displayName": "半身裙",
+          "value": "skirt"
+        }
+      ],
+      "value": "bottom",
+      "washByDefaultOnTakeOff": true
+    },
+    {
+      "displayName": "鞋子",
+      "isRequiredInOutfit": true,
+      "subtypes": [
+        {
+          "displayName": "运动鞋",
+          "value": "sneakers"
+        },
+        {
+          "displayName": "板鞋",
+          "value": "canvasShoes"
+        },
+        {
+          "displayName": "皮鞋",
+          "value": "leatherShoes"
+        },
+        {
+          "displayName": "靴子",
+          "value": "boots"
+        },
+        {
+          "displayName": "凉鞋",
+          "value": "sandals"
+        },
+        {
+          "displayName": "拖鞋",
+          "value": "slippers"
+        },
+        {
+          "displayName": "高跟鞋",
+          "value": "heels"
+        }
+      ],
+      "value": "shoes",
+      "washByDefaultOnTakeOff": false
+    },
+    {
+      "displayName": "配饰",
+      "isRequiredInOutfit": false,
+      "subtypes": [
+        {
+          "displayName": "帽子",
+          "value": "hat"
+        },
+        {
+          "displayName": "围巾",
+          "value": "scarf"
+        },
+        {
+          "displayName": "腰带",
+          "value": "belt"
+        },
+        {
+          "displayName": "包袋",
+          "value": "bag"
+        },
+        {
+          "displayName": "手套",
+          "value": "gloves"
+        },
+        {
+          "displayName": "眼镜",
+          "value": "glasses"
+        },
+        {
+          "displayName": "领带",
+          "value": "tie"
+        },
+        {
+          "displayName": "首饰",
+          "value": "jewelry"
+        }
+      ],
+      "value": "accessory",
+      "washByDefaultOnTakeOff": false
+    },
+    {
+      "displayName": "袜子",
+      "isRequiredInOutfit": false,
+      "subtypes": [
+        {
+          "displayName": "船袜",
+          "value": "noShowSocks"
+        },
+        {
+          "displayName": "短袜",
+          "value": "ankleSocks"
+        },
+        {
+          "displayName": "中筒袜",
+          "value": "crewSocks"
+        },
+        {
+          "displayName": "长筒袜",
+          "value": "kneeSocks"
+        },
+        {
+          "displayName": "运动袜",
+          "value": "athleticSocks"
+        }
+      ],
+      "value": "socks",
+      "washByDefaultOnTakeOff": true
+    }
+  ],
+  "colorCategories": [
+    {
+      "displayName": "黑色",
+      "value": "black"
+    },
+    {
+      "displayName": "白色",
+      "value": "white"
+    },
+    {
+      "displayName": "灰色",
+      "value": "gray"
+    },
+    {
+      "displayName": "米色",
+      "value": "beige"
+    },
+    {
+      "displayName": "棕色",
+      "value": "brown"
+    },
+    {
+      "displayName": "红色",
+      "value": "red"
+    },
+    {
+      "displayName": "橙色",
+      "value": "orange"
+    },
+    {
+      "displayName": "黄色",
+      "value": "yellow"
+    },
+    {
+      "displayName": "绿色",
+      "value": "green"
+    },
+    {
+      "displayName": "青色",
+      "value": "cyan"
+    },
+    {
+      "displayName": "蓝色",
+      "value": "blue"
+    },
+    {
+      "displayName": "紫色",
+      "value": "purple"
+    },
+    {
+      "displayName": "粉色",
+      "value": "pink"
+    },
+    {
+      "displayName": "多色",
+      "value": "multicolor"
+    }
+  ],
+  "genders": [
+    {
+      "displayName": "男",
+      "value": "male"
+    },
+    {
+      "displayName": "女",
+      "value": "female"
+    },
+    {
+      "displayName": "其他",
+      "value": "other"
+    },
+    {
+      "displayName": "未填写",
+      "value": "unspecified"
+    }
+  ],
+  "outfitSources": [
+    {
+      "displayName": "智能生成",
+      "value": "generated"
+    },
+    {
+      "displayName": "手动拼搭",
+      "value": "manual"
+    }
+  ],
+  "rules": {
+    "laundryRetentionWarningDays": 4,
+    "travelPackingCap": 5,
+    "unwornDays": 90
+  },
+  "scenarios": [
+    {
+      "conflictsWith": [],
+      "displayName": "通勤",
+      "value": "work"
+    },
+    {
+      "conflictsWith": [],
+      "displayName": "休闲",
+      "value": "casual"
+    },
+    {
+      "conflictsWith": [
+        "formal"
+      ],
+      "displayName": "运动",
+      "value": "sport"
+    },
+    {
+      "conflictsWith": [
+        "sport"
+      ],
+      "displayName": "正式",
+      "value": "formal"
+    }
+  ],
+  "seasons": [
+    {
+      "displayName": "春",
+      "value": "spring"
+    },
+    {
+      "displayName": "夏",
+      "value": "summer"
+    },
+    {
+      "displayName": "秋",
+      "value": "autumn"
+    },
+    {
+      "displayName": "冬",
+      "value": "winter"
+    }
+  ],
+  "statuses": [
+    {
+      "displayName": "在衣橱",
+      "value": "inWardrobe"
+    },
+    {
+      "displayName": "在洗衣袋",
+      "value": "inLaundry"
+    },
+    {
+      "displayName": "在行李箱",
+      "value": "inLuggage"
+    }
+  ],
+  "warmthLevels": [
+    {
+      "displayName": "严寒",
+      "maxSingleGarmentWarmth": 100,
+      "representativeScore": 92,
+      "seasons": [
+        "winter"
+      ],
+      "torsoBudget": 170,
+      "value": "frigid"
+    },
+    {
+      "displayName": "寒冷",
+      "maxSingleGarmentWarmth": 100,
+      "representativeScore": 76,
+      "seasons": [
+        "autumn",
+        "winter"
+      ],
+      "torsoBudget": 130,
+      "value": "cold"
+    },
+    {
+      "displayName": "凉爽",
+      "maxSingleGarmentWarmth": 100,
+      "representativeScore": 59,
+      "seasons": [
+        "spring",
+        "autumn"
+      ],
+      "torsoBudget": 88,
+      "value": "cool"
+    },
+    {
+      "displayName": "温和",
+      "maxSingleGarmentWarmth": 78,
+      "representativeScore": 42,
+      "seasons": [
+        "spring",
+        "autumn"
+      ],
+      "torsoBudget": 62,
+      "value": "mild"
+    },
+    {
+      "displayName": "暖和",
+      "maxSingleGarmentWarmth": 58,
+      "representativeScore": 25,
+      "seasons": [
+        "spring",
+        "summer"
+      ],
+      "torsoBudget": 40,
+      "value": "warm"
+    },
+    {
+      "displayName": "炎热",
+      "maxSingleGarmentWarmth": 38,
+      "representativeScore": 12,
+      "seasons": [
+        "summer"
+      ],
+      "torsoBudget": 22,
+      "value": "hot"
+    }
+  ]
+}

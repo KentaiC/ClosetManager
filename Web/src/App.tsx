@@ -1,0 +1,81 @@
+import { api } from './api/client'
+import { useResource } from './api/useResource'
+import { ErrorBoundary, ErrorPanel, Loading } from './app/Feedback'
+import { MetaLookup, MetaProvider } from './app/meta'
+import { Link, useRoute, type Route } from './app/router'
+import { ComingSoon } from './features/placeholder/ComingSoon'
+import { ItemDetailPage } from './features/wardrobe/ItemDetailPage'
+import { WardrobePage } from './features/wardrobe/WardrobePage'
+
+/** 主导航，与 App 底部的五个 Tab 一一对应。 */
+const TABS: { to: string; label: string; matches: Route['name'][] }[] = [
+  { to: '/', label: '衣橱', matches: ['wardrobe', 'item'] },
+  { to: '/laundry', label: '洗衣房', matches: ['laundry'] },
+  { to: '/outfits', label: '穿搭', matches: ['outfits'] },
+  { to: '/calendar', label: '日历', matches: ['calendar'] },
+  { to: '/analytics', label: '看板', matches: ['analytics'] },
+]
+
+function Page({ route }: { route: Route }) {
+  switch (route.name) {
+    case 'wardrobe':
+      return <WardrobePage />
+    case 'item':
+      return <ItemDetailPage id={route.id} />
+    case 'laundry':
+      return <ComingSoon title="洗衣房" />
+    case 'outfits':
+      return <ComingSoon title="穿搭" />
+    case 'calendar':
+      return <ComingSoon title="日历" />
+    case 'analytics':
+      return <ComingSoon title="看板" />
+    case 'settings':
+      return <ComingSoon title="设置" />
+    case 'notFound':
+      return <ComingSoon title="页面不存在" />
+  }
+}
+
+export function App() {
+  const route = useRoute()
+  const meta = useResource(() => api.meta().then((value) => new MetaLookup(value)), [])
+
+  return (
+    <div className="app">
+      <header className="app-header">
+        <Link to="/" className="brand">
+          Closet Manager
+        </Link>
+        <nav className="tabs" aria-label="主导航">
+          {TABS.map((tab) => (
+            <Link
+              key={tab.to}
+              to={tab.to}
+              className={`tab${tab.matches.includes(route.name) ? ' active' : ''}`}
+              aria-current={tab.matches.includes(route.name) ? 'page' : undefined}
+            >
+              {tab.label}
+            </Link>
+          ))}
+        </nav>
+        <Link to="/settings" className={`settings-link${route.name === 'settings' ? ' active' : ''}`} aria-label="设置">
+          设置
+        </Link>
+      </header>
+      <main className="app-main">
+        {meta.error ? (
+          <ErrorPanel error={meta.error} onRetry={meta.reload} />
+        ) : !meta.data ? (
+          <Loading label="正在连接本地服务…" />
+        ) : (
+          <MetaProvider value={meta.data}>
+            <ErrorBoundary key={route.name === 'item' ? `item-${route.id}` : route.name}>
+              <Page route={route} />
+            </ErrorBoundary>
+          </MetaProvider>
+        )}
+      </main>
+    </div>
+  )
+}

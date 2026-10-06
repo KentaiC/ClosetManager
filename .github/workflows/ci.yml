@@ -61,3 +61,55 @@ jobs:
           swift --version
       - name: Run swift test
         run: swift test
+
+  web:
+    name: Web UI (typecheck, unit tests, build)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: Web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: Web/package-lock.json
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build
+
+  e2e:
+    name: End-to-end (server + Chromium)
+    runs-on: ubuntu-latest
+    needs: [web, swift-package-linux]
+    timeout-minutes: 40
+    env:
+      SWIFT_IMAGE: swift:6.1-noble
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: Web/package-lock.json
+      - name: Build web UI and install Chromium
+        working-directory: Web
+        run: |
+          npm ci
+          npm run build
+          npx playwright install --with-deps chromium
+      - name: Build closet-server in the Swift image
+        run: |
+          docker run --rm -v "$PWD:$PWD" -w "$PWD" "$SWIFT_IMAGE" bash -c \
+            "apt-get update -q && apt-get install -y -q libsqlite3-dev && swift build --product closet-server"
+      - name: Run Playwright
+        working-directory: Web
+        run: |
+          export CLOSET_SERVER_BIN="docker run --rm --init --network host -v $GITHUB_WORKSPACE:$GITHUB_WORKSPACE -w $GITHUB_WORKSPACE $SWIFT_IMAGE $GITHUB_WORKSPACE/.build/debug/closet-server"
+          npx playwright test
+      - name: Stop server containers
+        if: always()
+        run: docker ps -q --filter "ancestor=$SWIFT_IMAGE" | xargs -r docker rm -f

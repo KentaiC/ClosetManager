@@ -1,0 +1,65 @@
+{
+  "record": {
+    "createdAt": "2026-07-01T08:00:00Z",
+    "date": "2026-07-01T08:00:00Z",
+    "id": "C3D4E5F6-A7B8-4C9D-8E0F-2A3B4C5D6E7F",
+    "isActive": true,
+    "items": [
+      {
+        "brand": "示例品牌",
+        "category": "top",
+        "createdAt": "2026-06-20T08:00:00Z",
+        "dominantColor": {
+          "alpha": 1,
+          "blue": 0.96,
+          "green": 0.96,
+          "hex": "#F5F5F5",
+          "name": "白色",
+          "red": 0.96
+        },
+        "dominantColorCategory": "white",
+        "id": "7A2C1D9E-3B4F-4C5A-9D6E-1F2A3B4C5D6E",
+        "images": {
+          "display": {
+            "byteCount": 70,
+            "displayable": true,
+            "format": "png",
+            "url": "/api/v1/items/7A2C1D9E-3B4F-4C5A-9D6E-1F2A3B4C5D6E/image?variant=display&v=cdb30873bdf16770"
+          },
+          "original": {
+            "byteCount": 22,
+            "displayable": true,
+            "format": "jpeg",
+            "url": "/api/v1/items/7A2C1D9E-3B4F-4C5A-9D6E-1F2A3B4C5D6E/image?variant=original&v=d20f6ffd523b78a8"
+          },
+          "processed": {
+            "byteCount": 70,
+            "displayable": true,
+            "format": "png",
+            "url": "/api/v1/items/7A2C1D9E-3B4F-4C5A-9D6E-1F2A3B4C5D6E/image?variant=processed&v=cdb30873bdf16770"
+          }
+        },
+        "isWaterproof": false,
+        "name": "白色T恤",
+        "scenarios": [
+          "work",
+          "casual"
+        ],
+        "seasons": [
+          "spring",
+          "summer"
+        ],
+        "status": "inWardrobe",
+        "subtype": "tee",
+        "title": "白色T恤",
+        "updatedAt": "2026-06-21T09:30:00Z",
+        "warmthLevel": "warm",
+        "warmthLevels": [
+          "warm"
+        ],
+        "warmthScore": 20
+      }
+    ],
+    "notes": "只穿了上衣"
+  }
+}
