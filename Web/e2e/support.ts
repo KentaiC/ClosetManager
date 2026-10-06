@@ -11,3 +11,5 @@ export function trackPageErrors(page: Page): () => void {
 }
 
 export const TEE_ID = '7A2C1D9E-3B4F-4C5A-9D6E-1F2A3B4C5D6E'
+export const BOTTOM_ID = '8B3D2E0F-4C5A-4D6B-8E7F-2A3B4C5D6E7F'
+export const BOOTS_ID = '9C4E3F1A-5D6B-4E7C-9F8A-3B4C5D6E7F8A'
