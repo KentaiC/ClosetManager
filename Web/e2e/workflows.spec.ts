@@ -1,5 +1,6 @@
 import { expect, test, type Page } from '@playwright/test'
-import { BOOTS_ID, BOTTOM_ID, trackPageErrors } from './support'
+import { readFile } from 'node:fs/promises'
+import { BOOTS_ID, BOTTOM_ID, photo, trackPageErrors } from './support'
 
 // 这些流程按顺序修改同一份样例数据，模拟一次完整使用：
 // 脱下当前穿搭并洗净，结束差旅，补全单品信息，生成并穿着穿搭，查看看板，最后删除。
@@ -45,12 +46,17 @@ test('end the trip from the travel packer', async ({ page }) => {
   assertNoErrors()
 })
 
-test('give the unnamed bottom a scenario so it can be used in outfits', async ({ page }) => {
+test('give the unnamed bottom a photo and a scenario so it can be used in outfits', async ({ page }) => {
   const assertNoErrors = trackPageErrors(page)
   await page.goto(`/items/${BOTTOM_ID}`)
   await expect(page.getByRole('heading', { level: 1, name: '下装' })).toBeVisible()
   await page.getByRole('button', { name: '编辑' }).click()
   const form = page.getByRole('form', { name: '编辑单品' })
+  // 与 App 相同，没有图片的单品要先添加图片才能保存。
+  await expect(form.getByRole('button', { name: '保存' })).toBeDisabled()
+  await form.getByLabel('添加图片').setInputFiles(photo('jeans.png'))
+  await expect(form.getByRole('img', { name: '图片预览' })).toBeVisible()
+  await expect(form.getByText('当前服务不支持本地抠图，已使用原图。')).toBeVisible()
   const name = form.getByLabel('名称')
   await expect(name).toHaveValue('')
   await expect(name).not.toHaveAttribute('placeholder', '')
@@ -175,4 +181,73 @@ test('delete a favourite, a wear record and an item', async ({ page }) => {
   // 浏览器会把 404 响应记为控制台错误，所以在错误检查之后再访问已删除的单品。
   await page.goto(`/items/${BOOTS_ID}`)
   await expect(page.getByText('未找到该单品')).toBeVisible()
+})
+
+test('add an item from a photo', async ({ page }) => {
+  const assertNoErrors = trackPageErrors(page)
+  await page.goto('/')
+  await page.getByRole('link', { name: '单件录入' }).click()
+  const form = page.getByRole('form', { name: '新增单品' })
+  await form.getByLabel('添加图片').setInputFiles(photo('coat.png'))
+  const preview = form.getByRole('img', { name: '图片预览' })
+  await expect(preview).toBeVisible()
+  await expect.poll(() => preview.evaluate((element: HTMLImageElement) => element.complete && element.naturalWidth)).toBe(1)
+  await form.getByLabel('分类').selectOption('outerwear')
+  await form.getByLabel('名称').fill('羊毛大衣')
+  await form.getByRole('button', { name: '保存' }).click()
+  await expect(page.getByText('已添加')).toBeVisible()
+  const card = page.getByTestId('gallery').getByRole('link', { name: '羊毛大衣' })
+  await expect(card).toBeVisible()
+  await expect.poll(() => card.getByRole('img').evaluate((element: HTMLImageElement) => element.complete && element.naturalWidth)).toBe(1)
+  assertNoErrors()
+})
+
+test('batch import: save one, skip one', async ({ page }) => {
+  const assertNoErrors = trackPageErrors(page)
+  await page.goto('/items/batch')
+  await page.getByLabel('选择多张图片').setInputFiles([photo('a.png'), photo('b.png')])
+  await expect(page.getByText('第 1 / 2 件')).toBeVisible()
+  const form = page.getByRole('form', { name: '新增单品' })
+  await form.getByLabel('名称').fill('批量一号')
+  await page.getByRole('button', { name: '保存并下一件' }).click()
+  await expect(page.getByText('第 2 / 2 件')).toBeVisible()
+  await page.getByRole('button', { name: '跳过这张' }).click()
+  await expect(page.getByText('已保存 1 件')).toBeVisible()
+  await expect(page.getByTestId('gallery').getByRole('link', { name: '批量一号' })).toBeVisible()
+  assertNoErrors()
+})
+
+test('export a backup and import it again', async ({ page }) => {
+  const assertNoErrors = trackPageErrors(page)
+  await page.goto('/settings')
+  const downloading = page.waitForEvent('download')
+  await page.getByRole('button', { name: '生成并下载备份文件' }).click()
+  const download = await downloading
+  expect(download.suggestedFilename()).toMatch(/^ClosetBackup-.*\.wardrobe$/)
+  const file = await readFile((await download.path())!)
+  const bundle = JSON.parse(file.toString('utf8')) as { version: number; items: { name: string; originalImageBase64?: string }[] }
+  expect(bundle.version).toBe(1)
+  const coat = bundle.items.find((item) => item.name === '羊毛大衣')
+  expect(coat?.originalImageBase64).toBe('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==')
+
+  await page.getByLabel('导入备份').setInputFiles({ name: download.suggestedFilename(), mimeType: 'application/octet-stream', buffer: file })
+  const dialog = page.getByRole('dialog', { name: '导入方式' })
+  await dialog.getByRole('button', { name: '覆盖现有数据' }).click()
+  await expect(dialog.getByText('预检通过。覆盖会先清空现有的单品、穿搭与穿着记录。')).toBeVisible()
+  await dialog.getByRole('button', { name: '确认导入' }).click()
+  await expect(dialog.getByText('导入完成。')).toBeVisible()
+  await expect(dialog.getByText(/导入前的数据已备份为 backups\/before-import\/ClosetBackup-/)).toBeVisible()
+  await dialog.getByRole('button', { name: '完成' }).click()
+
+  await page.goto('/')
+  await expect(page.getByTestId('gallery').getByRole('link', { name: '羊毛大衣' })).toBeVisible()
+  assertNoErrors()
+})
+
+test('similar items explain that they need macOS on this server', async ({ page }) => {
+  const assertNoErrors = trackPageErrors(page)
+  await page.goto('/settings')
+  await page.getByRole('link', { name: '清理相似衣物' }).click()
+  await expect(page.getByText('当前服务不支持相似检测')).toBeVisible()
+  assertNoErrors()
 })
