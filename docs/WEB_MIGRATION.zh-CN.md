@@ -40,6 +40,8 @@ iOS App 保持可编译、可运行，与 Web 版共用 `ClosetManager/Core` 中
 
 Core 只允许依赖 Foundation。SwiftUI 桥接放在 App 内，例如 `ClosetManager/Models/Support/StoredColor+SwiftUI.swift`。
 
+`ClosetManager/Imaging` 用同样的方式共享 App 中调用 Vision、CoreImage、ImageIO 的代码，即 `VisionService` 与 `DuplicationDetectorService`。SwiftPM 把它编译成 `ClosetImaging` 模块。文件整体包在 `#if canImport(Vision)` 中，Linux 上是空模块。其中的取色与相似分组规则属于纯计算，放在 Core 的 `ColorExtraction` 与 `SimilarityGrouping` 中。
+
 ## 4. Roadmap 调整
 
 | 编号 | 调整 | 原因 |
@@ -64,13 +66,15 @@ Web 版与 App 的有意差异如下。界面形式上的差异，例如删除�
 ```text
 Server/Sources/
   CSQLite          Linux 上的系统 SQLite 模块映射
-  ClosetStorage    SQLite 封装、迁移、存储 actor、按内容寻址的图片存储
-  ClosetServices   应用服务：备份导入、查询、单品编辑、穿着流转、穿搭、看板与筛选、差旅、设置
+  ClosetStorage    SQLite 封装、迁移、存储 actor、按内容寻址的图片存储、上传记录与派生图缓存
+  ClosetServices   应用服务：备份导入导出、查询、单品新增与编辑、图片上传与处理、穿着流转、穿搭、看板与筛选、差旅、设置
   ClosetHTTP       Hummingbird 路由、API 模型、安全中间件
   ClosetServer     命令行入口 closet-server
 ```
 
-依赖方向为 ClosetServer → ClosetHTTP → ClosetServices → ClosetStorage → ClosetCore。
+依赖方向为 ClosetServer → ClosetHTTP → ClosetServices → ClosetStorage → ClosetCore。ClosetServices 还依赖 ClosetImaging。平台相关的图片处理通过 `ImageProcessor` 协议隔离：macOS 上是 `AppleImageProcessor`，其它平台是 `UnavailableImageProcessor`，它只校验并保存上传的图片。
+
+服务端数据目录中的 `backups/pre-migration` 存放 schema 升级前的数据库副本，`backups/before-import` 存放导入备份前自动导出的当前数据，保留最近五份。
 
 开发时的常用命令如下，`--data-dir` 省略时使用用户的应用数据目录。
 
@@ -87,13 +91,15 @@ Web/
   src/api         API 客户端、与服务端对应的类型、资源加载 hook
   src/app         路由、元数据查找、反馈组件、对话框、提示、数据版本、外观与本地偏好
   src/components  跨页面复用的组件，如胶囊选择组与缩略图行
-  src/features    按页面划分的功能，与 App 的 Views 目录一一对应
+  src/features    按页面划分的功能，与 App 的 Views 目录一一对应；items 为单件录入、批量录入与相似单品清理
   e2e             Playwright 端到端测试
 ```
 
 前端不定义任何枚举的中文名称或业务阈值，全部来自 `/api/v1/meta`。界面偏好只保存在当前浏览器，键名沿用 App 的 `@AppStorage` 键，包括 `galleryItemSize`、`ui.accent`、`ui.appearance`、`ui.cornerRadius`。个人资料属于数据，保存在服务端。
 
 写操作成功后调用 `useDataVersion().invalidate()`，所有依赖数据版本的页面重新加载。这对应 App 中 SwiftData 的 `@Query` 在数据变化后自动刷新。
+
+页面通过 `useCapabilities()` 读取服务端的图片处理能力，决定是否提示「当前服务不支持本地抠图」之类的信息。
 
 端到端测试分两个 Playwright 项目。`read-only` 只读取样例数据；`workflows` 依赖它，按顺序修改同一份数据，模拟一次完整使用。
 
@@ -184,3 +190,35 @@ App 中除下列功能外，其余页面均已可在浏览器中使用。
 | 5.6 | 前端：单件录入、批量录入、设置页的备份与相似单品清理 |
 
 原图按收到的字节原样保存，与 App 相同，元数据不做处理，等待决策 D4。抠图结果与派生图由图像框架重新编码生成。在 Linux 上运行时没有图像解码能力，上传的图片会通过格式与尺寸校验后保存，但不做抠图与取色，主色需要在表单中手动选择，HEIC 图片在多数浏览器中无法显示。
+
+实际提交如下。
+
+| 提交 | 内容 |
+|---|---|
+| `docs: plan stage 5 file workflows and record roadmap adjustments` | 本节计划与 R5、R6 |
+| `feat(core): share colour extraction and similarity grouping rules` | 5.1 |
+| `refactor(imaging): share the App's Vision pipeline with the server on macOS` | 5.2 |
+| `feat(storage): track uploads and cache derived images` | schema 迁移 2：上传记录与派生图缓存 |
+| `feat(server): image uploads, processing and new items` | 5.3 的服务层 |
+| `feat(server): HTTP endpoints for uploads, new items and similar items` | 5.3 与 5.5 的接口 |
+| `feat(server): backup export and safe restore` | 5.4 的服务层，命令行导入也改为先自动备份 |
+| `feat(server): backup export and import over HTTP` | 5.4 的接口 |
+| `feat(web): add items from photos, one at a time or in batches` | 5.6 的录入部分 |
+| `feat(web): backup export and import, and similar-item cleanup` | 5.6 的设置部分 |
+| `test(web): end-to-end file workflows` | 文件工作流的端到端测试 |
+| `fix(web): keep phone action bars above the tab bar and style name fields` | 截图检查中发现的两处布局问题 |
+
+验证结果。Swift 测试 175 个、前端单元测试 108 个、端到端测试 19 个全部通过，端到端测试期间没有脚本错误、控制台错误或 CSP 拦截。替代验证环境中，App 改动后的 `VisionService` 与 `DuplicationDetectorService`、服务端的 `AppleImageProcessor` 都对照桩代码通过了类型检查，同一套桩代码也能编译改动前的 App 代码；共享核心的取色规则与原实现在 3,000 组样本上逐项一致，在 500 组有并列的样本上，核心的结果都在原实现所有可能的结果之中；相似分组在 2,000 组样本上一致。平局用例的比较方式最初有缺陷：每次调用原实现都会新建字典，遍历顺序不固定，所以「按排列重排」并没有覆盖全部顺序。修正为先排成固定顺序再重排后，连续 61 次运行全部通过，被测代码没有改动。备份导出与样例文件逐字段一致，导出后重新导入得到相同的数据。
+
+遗留问题如下。
+
+| 问题 | 说明 |
+|---|---|
+| macOS 上的图片处理未经编译 | 见 R6。需要在 Mac 上运行 `swift build` 与 `swift test`，并用真实照片走一遍单件录入、批量录入与相似检测 |
+| 原图元数据 | 等待决策 D4。目前与 App 相同，原图连同 EXIF 等元数据原样保存，并随备份导出 |
+| 备份格式没有槽位 | 第 1 版备份没有槽位字段，Web 版记录的穿搭槽位导出后会丢失。审计 Phase 1.4 的备份第 2 版可以解决 |
+| 备份整份读入内存 | 导入上限 1 GB，与 App 和命令行相同，整份解析 |
+| 看板中并列项的顺序不固定 | 件数相同的颜色在每次请求中的先后顺序可能不同，原因是共享统计规则按字典顺序处理并列，App 也是如此。属于行为修复轨道，见 R2 |
+| 一次未能复现的测试失败 | `APITests.testUnknownImageDataIsServedAsAttachment` 在一次完整运行中失败，之后连续 33 次完整运行都通过。断言已改为在失败时输出响应内容，便于下次定位 |
+| 相似检测每次全量计算 | 与 App 相同，不缓存特征，也不区分分类。对应审计 M-10，保持现状 |
+| 缩略图首次生成 | macOS 上缩略图在第一次请求时生成并缓存，衣橱第一次打开会慢一些 |
