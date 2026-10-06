@@ -63,6 +63,7 @@ final class APITests: XCTestCase {
             XCTAssertEqual(meta.categories.first { $0.value == "top" }?.subtypes.count, 8)
             XCTAssertEqual(meta.scenarios.first { $0.value == "formal" }?.conflictsWith, ["sport"])
             XCTAssertEqual(meta.warmthLevels.first { $0.value == "hot" }?.torsoBudget, 22)
+            XCTAssertEqual(meta.warmthLevels.map { "\($0.minScore)-\($0.maxScore)" }, ["85-100", "68-84", "51-67", "34-50", "17-33", "1-16"])
             XCTAssertEqual(meta.rules.laundryRetentionWarningDays, 4)
             XCTAssertEqual(meta.rules.unwornDays, 90)
         }

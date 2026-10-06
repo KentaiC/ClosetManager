@@ -2,6 +2,12 @@ import Foundation
 import ClosetCore
 import Hummingbird
 
+/// 某个保暖档位覆盖的保暖度范围（1 到 100 之间）。
+func scoreRange(_ level: WarmthLevel) -> ClosedRange<Int> {
+    let scores = (1...100).filter { WarmthLevel.from(score: $0) == level }
+    return (scores.first ?? 0)...(scores.last ?? 0)
+}
+
 /// 枚举与规则元数据。前端用它渲染选项与中文名称，不在 TypeScript 中重复定义。
 public struct APIMeta: Codable, Sendable, ResponseEncodable {
     public struct Option: Codable, Sendable {
@@ -27,6 +33,9 @@ public struct APIMeta: Codable, Sendable, ResponseEncodable {
         public var value: String
         public var displayName: String
         public var representativeScore: Int
+        /// 落入该档位的保暖度范围，由 `WarmthLevel.from(score:)` 逐分计算得出。
+        public var minScore: Int
+        public var maxScore: Int
         public var torsoBudget: Int
         public var maxSingleGarmentWarmth: Int
         public var seasons: [String]
@@ -63,6 +72,7 @@ public struct APIMeta: Codable, Sendable, ResponseEncodable {
         statuses: ItemStatus.allCases.map { Option(value: $0.rawValue, displayName: $0.displayName) },
         warmthLevels: WarmthLevel.allCases.map {
             WarmthLevelInfo(value: $0.rawValue, displayName: $0.displayName, representativeScore: $0.representativeScore,
+                            minScore: scoreRange($0).lowerBound, maxScore: scoreRange($0).upperBound,
                             torsoBudget: $0.torsoBudget, maxSingleGarmentWarmth: $0.maxSingleGarmentWarmth,
                             seasons: Season.allCases.filter($0.seasons.contains).map(\.rawValue))
         },
