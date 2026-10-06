@@ -24,6 +24,7 @@ enum Migrations {
     static let colorCategoryValues = ["black", "white", "gray", "beige", "brown", "red", "orange", "yellow",
                                       "green", "cyan", "blue", "purple", "pink", "multicolor"]
     static let slotValues = ["outerwear", "midLayer", "top", "bottom", "socks", "shoes", "accessory"]
+    static let mediaVariantValues = ["display", "thumbnail"]
     /// 子类与所属分类的对照表快照。
     static let subtypeCategories: [(String, String)] = [
         ("jacket", "outerwear"), ("trenchCoat", "outerwear"), ("overcoat", "outerwear"), ("downJacket", "outerwear"),
@@ -146,6 +147,23 @@ enum Migrations {
             value TEXT NOT NULL CHECK (json_valid(value)),
             updated_at REAL NOT NULL
         );
+        """),
+        // 上传记录：上传后尚未保存到单品的图片在宽限期内不被清理。
+        // 派生图缓存：浏览器无法显示的格式转换后的版本，以及列表用的缩略图。
+        // 派生图可以随时重新生成，不属于单品数据本身；源图被清理时随之删除。
+        Migration(version: 2, name: "uploads and media variants", sql: """
+        CREATE TABLE uploads (
+            sha256 TEXT PRIMARY KEY REFERENCES media (sha256) ON DELETE CASCADE,
+            uploaded_at REAL NOT NULL
+        );
+        CREATE TABLE media_variants (
+            source_sha256 TEXT NOT NULL REFERENCES media (sha256) ON DELETE CASCADE,
+            kind TEXT NOT NULL CHECK (kind IN (\(list(mediaVariantValues)))),
+            sha256 TEXT NOT NULL REFERENCES media (sha256),
+            created_at REAL NOT NULL,
+            PRIMARY KEY (source_sha256, kind)
+        );
+        CREATE INDEX media_variants_target ON media_variants (sha256);
         """),
     ]
 }

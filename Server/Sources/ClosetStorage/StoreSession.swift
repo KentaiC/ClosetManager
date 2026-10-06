@@ -401,13 +401,56 @@ public final class StoreSession {
         ])
     }
 
-    /// 不再被任何单品引用的媒体哈希。
-    public func unreferencedMediaHashes() throws -> [String] {
+    /// 登记一次上传。同一张图片再次上传时刷新上传时间。
+    public func recordUpload(_ ref: MediaRef, at time: Date) throws {
+        try insertMedia(ref)
+        try db.run("INSERT INTO uploads (sha256, uploaded_at) VALUES (?, ?) ON CONFLICT(sha256) DO UPDATE SET uploaded_at = excluded.uploaded_at;", [
+            .text(ref.sha256), .real(time.timeIntervalSince1970),
+        ])
+    }
+
+    /// 按哈希查找已登记的图片。
+    public func media(sha256: String) throws -> MediaRef? {
+        guard let row = try db.query("SELECT sha256, format, byte_count FROM media WHERE sha256 = ?;", [.text(sha256)]).first,
+              let format = row.string("format").flatMap(ImageFormat.init(rawValue:)), let bytes = row.int("byte_count") else { return nil }
+        return MediaRef(sha256: sha256, format: format, byteCount: bytes)
+    }
+
+    /// 某张图片已缓存的派生图。
+    public func variant(of source: String, kind: MediaVariantKind) throws -> MediaRef? {
+        guard let row = try db.query("SELECT sha256 FROM media_variants WHERE source_sha256 = ? AND kind = ?;", [
+            .text(source), .text(kind.rawValue),
+        ]).first, let sha = row.string("sha256") else { return nil }
+        return try media(sha256: sha)
+    }
+
+    /// 登记一张派生图。已登记时保留原有记录。
+    public func insertVariant(of source: String, kind: MediaVariantKind, variant: MediaRef) throws {
+        try insertMedia(variant)
+        try db.run("INSERT OR IGNORE INTO media_variants (source_sha256, kind, sha256, created_at) VALUES (?, ?, ?, ?);", [
+            .text(source), .text(kind.rawValue), .text(variant.sha256), .real(Date().timeIntervalSince1970),
+        ])
+    }
+
+    /// 不再被任何单品引用的媒体哈希。被引用图片的派生图也算被引用；
+    /// 在 `uploadsSince` 之后上传、尚未保存到单品的图片及其派生图也保留。
+    public func unreferencedMediaHashes(uploadsSince cutoff: Date? = nil) throws -> [String] {
         try db.query("""
-            SELECT sha256 FROM media
-            WHERE sha256 NOT IN (SELECT processed_media FROM items WHERE processed_media IS NOT NULL)
-              AND sha256 NOT IN (SELECT original_media FROM items WHERE original_media IS NOT NULL);
-            """).compactMap { $0.string("sha256") }
+            WITH live (sha256) AS (
+                SELECT processed_media FROM items WHERE processed_media IS NOT NULL
+                UNION SELECT original_media FROM items WHERE original_media IS NOT NULL
+                UNION SELECT sha256 FROM uploads WHERE uploaded_at >= ?
+            ), live_all (sha256) AS (
+                SELECT sha256 FROM live
+                UNION SELECT v.sha256 FROM media_variants v JOIN live ON v.source_sha256 = live.sha256
+            )
+            SELECT sha256 FROM media WHERE sha256 NOT IN (SELECT sha256 FROM live_all);
+            """, [.real((cutoff ?? Date.distantFuture).timeIntervalSince1970)]).compactMap { $0.string("sha256") }
+    }
+
+    /// 删除早于 `cutoff` 的上传记录。图片本身是否保留由是否被单品引用决定。
+    public func deleteUploadRecords(before cutoff: Date) throws {
+        try db.run("DELETE FROM uploads WHERE uploaded_at < ?;", [.real(cutoff.timeIntervalSince1970)])
     }
 
     public func referencedMediaHashes() throws -> Set<String> {
@@ -415,6 +458,10 @@ public final class StoreSession {
     }
 
     public func deleteMediaRows(_ hashes: [String]) throws {
+        for hash in hashes {
+            try db.run("DELETE FROM media_variants WHERE source_sha256 = ? OR sha256 = ?;", [.text(hash), .text(hash)])
+            try db.run("DELETE FROM uploads WHERE sha256 = ?;", [.text(hash)])
+        }
         for hash in hashes {
             try db.run("DELETE FROM media WHERE sha256 = ?;", [.text(hash)])
         }

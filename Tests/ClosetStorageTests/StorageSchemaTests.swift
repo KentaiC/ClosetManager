@@ -12,6 +12,7 @@ final class StorageSchemaTests: XCTestCase {
         XCTAssertEqual(Migrations.sourceValues, OutfitSource.allCases.map(\.rawValue))
         XCTAssertEqual(Migrations.colorCategoryValues, ColorCategory.allCases.map(\.rawValue))
         XCTAssertEqual(Migrations.slotValues, OutfitSlot.allCases.map(\.rawValue))
+        XCTAssertEqual(Migrations.mediaVariantValues, MediaVariantKind.allCases.map(\.rawValue))
         XCTAssertEqual(Migrations.subtypeCategories.map(\.0), Subtype.allCases.map(\.rawValue))
         XCTAssertEqual(Migrations.subtypeCategories.map(\.1), Subtype.allCases.map(\.category.rawValue))
     }
@@ -33,6 +34,26 @@ final class StorageSchemaTests: XCTestCase {
         let count = try await reopened.read { try $0.counts().items }
         XCTAssertEqual(count, 1)
         XCTAssertFalse(FileManager.default.fileExists(atPath: directory.preMigrationBackupsURL.path), "no upgrade, no backup")
+    }
+
+    func testVersionOneDatabaseUpgradesWithBackupAndKeepsItsData() async throws {
+        let directory = DataDirectory(root: try makeTemporaryDirectory())
+        try directory.prepare()
+        let item = makeItem(original: MediaRef(sha256: String(repeating: "b", count: 64), format: .jpeg, byteCount: 3))
+        do {
+            // 模拟第四阶段发布时的数据库：只执行到版本 1。
+            let db = try SQLiteDatabase(path: directory.databaseURL.path)
+            try MigrationRunner.migrate(db, backupBeforeUpgrade: nil, migrations: Array(Migrations.all.prefix(1)))
+            try db.transaction { try StoreSession(db: db).insertItem(item) }
+        }
+        let store = try ClosetStore(directory: directory)
+        let version = try await store.schemaVersion()
+        XCTAssertEqual(version, 2)
+        let stored = try await store.read { try $0.item(id: item.id) }
+        XCTAssertEqual(stored, item)
+        let backups = try FileManager.default.contentsOfDirectory(atPath: directory.preMigrationBackupsURL.path)
+        XCTAssertEqual(backups.count, 1)
+        XCTAssertTrue(backups[0].hasPrefix("closet-v1-"))
     }
 
     func testUpgradeTakesBackupFirst() throws {

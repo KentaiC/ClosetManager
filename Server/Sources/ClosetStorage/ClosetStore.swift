@@ -41,12 +41,17 @@ public actor ClosetStore {
     }
 
     /// 清理不再被引用的图片：先删数据库中的媒体行，再删磁盘上没有对应行的文件。
+    ///
+    /// 上传后尚未保存到单品的图片在宽限期内保留，见 `uploadGracePeriod`。
+    /// - Parameter now: 当前时间，用于计算宽限期。
     /// - Returns: 删除的文件数。
     @discardableResult
-    public func collectUnreferencedMedia() throws -> Int {
+    public func collectUnreferencedMedia(now: Date = Date()) throws -> Int {
         let session = StoreSession(db: db)
+        let cutoff = now.addingTimeInterval(-Self.uploadGracePeriod)
         let referenced = try db.transaction { () -> Set<String> in
-            try session.deleteMediaRows(try session.unreferencedMediaHashes())
+            try session.deleteMediaRows(try session.unreferencedMediaHashes(uploadsSince: cutoff))
+            try session.deleteUploadRecords(before: cutoff)
             return try session.referencedMediaHashes()
         }
         var removed = 0
@@ -56,4 +61,7 @@ public actor ClosetStore {
         }
         return removed
     }
+
+    /// 未保存到单品的上传图片保留的时长。
+    public static let uploadGracePeriod: TimeInterval = 24 * 60 * 60
 }

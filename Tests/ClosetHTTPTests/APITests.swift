@@ -45,7 +45,7 @@ final class APITests: XCTestCase {
             XCTAssertEqual(response.status, .ok)
             let health = try Self.decode(APIHealth.self, response)
             XCTAssertEqual(health.status, "ok")
-            XCTAssertEqual(health.schemaVersion, 1)
+            XCTAssertEqual(health.schemaVersion, 2)
             XCTAssertEqual(health.counts.items, 3)
             XCTAssertFalse(health.capabilities.backgroundRemoval)
             XCTAssertEqual(response.headers[.contentSecurityPolicy], SecurityHeadersMiddleware<BasicRequestContext>.contentSecurityPolicy)

@@ -57,3 +57,84 @@ final class MediaStoreTests: XCTestCase {
         _ = strayFile
     }
 }
+
+final class UploadAndVariantTests: XCTestCase {
+    private let now = Date(timeIntervalSince1970: 1_800_000_000)
+
+    func testRecentUploadsSurviveCollectionUntilTheGracePeriodEnds() async throws {
+        let store = try ClosetStore(inMemoryWithMediaRoot: try makeTemporaryDirectory())
+        let upload = try store.media.write(pngBytes)
+        try await store.transaction { try $0.recordUpload(upload, at: Date(timeIntervalSince1970: 1_800_000_000)) }
+
+        let removedInGrace = try await store.collectUnreferencedMedia(now: now.addingTimeInterval(ClosetStore.uploadGracePeriod - 1))
+        XCTAssertEqual(removedInGrace, 0)
+        XCTAssertEqual(store.media.storedHashes(), [upload.sha256])
+        let stillRegistered = try await store.read { try $0.media(sha256: upload.sha256) }
+        XCTAssertNotNil(stillRegistered)
+
+        let removedAfterGrace = try await store.collectUnreferencedMedia(now: now.addingTimeInterval(ClosetStore.uploadGracePeriod + 1))
+        XCTAssertEqual(removedAfterGrace, 1)
+        XCTAssertTrue(store.media.storedHashes().isEmpty)
+        let registeredAfterGrace = try await store.read { try $0.media(sha256: upload.sha256) }
+        XCTAssertNil(registeredAfterGrace)
+    }
+
+    func testAnUploadSavedToAnItemOutlivesItsUploadRecord() async throws {
+        let store = try ClosetStore(inMemoryWithMediaRoot: try makeTemporaryDirectory())
+        let upload = try store.media.write(pngBytes)
+        try await store.transaction { session in
+            try session.recordUpload(upload, at: Date(timeIntervalSince1970: 1_800_000_000))
+            try session.insertItem(makeItem(original: upload))
+        }
+        try await store.collectUnreferencedMedia(now: now.addingTimeInterval(ClosetStore.uploadGracePeriod * 3))
+        XCTAssertEqual(store.media.storedHashes(), [upload.sha256])
+    }
+
+    func testDeletedItemMediaIsStillCollectedImmediately() async throws {
+        let store = try ClosetStore(inMemoryWithMediaRoot: try makeTemporaryDirectory())
+        let ref = try store.media.write(pngBytes)
+        let item = makeItem(processed: ref)
+        try await store.transaction { try $0.insertItem(item) }
+        try await store.transaction { _ = try $0.deleteItem(id: item.id) }
+        let removed = try await store.collectUnreferencedMedia(now: now)
+        XCTAssertEqual(removed, 1)
+    }
+
+    func testVariantsLiveAndDieWithTheirSource() async throws {
+        let store = try ClosetStore(inMemoryWithMediaRoot: try makeTemporaryDirectory())
+        let source = try store.media.write(pngBytes)
+        let thumbnail = try store.media.write(jpegBytes)
+        let item = makeItem(original: source)
+        try await store.transaction { session in
+            try session.insertItem(item)
+            try session.insertVariant(of: source.sha256, kind: .thumbnail, variant: thumbnail)
+        }
+        let cached = try await store.read { try $0.variant(of: source.sha256, kind: .thumbnail) }
+        XCTAssertEqual(cached, thumbnail)
+        let missingDisplay = try await store.read { try $0.variant(of: source.sha256, kind: .display) }
+        XCTAssertNil(missingDisplay)
+
+        let removedWhileReferenced = try await store.collectUnreferencedMedia(now: now)
+        XCTAssertEqual(removedWhileReferenced, 0, "a variant of a referenced image is referenced")
+        try await store.transaction { _ = try $0.deleteItem(id: item.id) }
+        let removedAfterDelete = try await store.collectUnreferencedMedia(now: now)
+        XCTAssertEqual(removedAfterDelete, 2)
+        let variantAfterDelete = try await store.read { try $0.variant(of: source.sha256, kind: .thumbnail) }
+        XCTAssertNil(variantAfterDelete)
+        let mediaRows = try await store.read { try $0.counts() }.media
+        XCTAssertEqual(mediaRows, 0)
+    }
+
+    func testVariantKindIsConstrained() async throws {
+        let store = try ClosetStore(inMemoryWithMediaRoot: try makeTemporaryDirectory())
+        let ref = try store.media.write(pngBytes)
+        try await store.transaction { try $0.insertMedia(ref) }
+        let rejected = expectation(description: "unknown kind rejected")
+        do {
+            try await store.transaction { session in
+                try session.db.execute("INSERT INTO media_variants (source_sha256, kind, sha256, created_at) VALUES ('\(ref.sha256)', 'poster', '\(ref.sha256)', 0);")
+            }
+        } catch { rejected.fulfill() }
+        await fulfillment(of: [rejected], timeout: 1)
+    }
+}

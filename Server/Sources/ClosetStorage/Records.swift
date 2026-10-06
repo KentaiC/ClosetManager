@@ -14,6 +14,14 @@ public struct MediaRef: Sendable, Equatable, Hashable, Codable {
     }
 }
 
+/// 派生图的种类。
+public enum MediaVariantKind: String, Sendable, CaseIterable {
+    /// 浏览器可以显示的完整版本，用于 HEIC 等格式。
+    case display
+    /// 列表与缩略图使用的小图。
+    case thumbnail
+}
+
 /// 数据库中的一件单品。字段含义与 App 的 `ClothingItem` 一一对应。
 public struct StoredItem: WardrobeItemRepresentable, Sendable, Equatable {
     public var id: UUID
