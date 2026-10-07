@@ -69,7 +69,15 @@ final class LocalLaunchTests: XCTestCase {
         address.sin_addr = in_addr(s_addr: inet_addr("127.0.0.1"))
         var length = socklen_t(MemoryLayout<sockaddr_in>.size)
         let bound = withUnsafeMutablePointer(to: &address) { pointer in
-            pointer.withMemoryRebound(to: sockaddr.self, capacity: 1) { bind(fd, $0, length) == 0 && listen(fd, 1) == 0 && getsockname(fd, $0, &length) == 0 }
+            pointer.withMemoryRebound(to: sockaddr.self, capacity: 1) { socketAddress -> Bool in
+                // macOS 上 XCTestCase 继承自 NSObject，在方法内直接写 bind 会解析为 NSObject 的实例方法，这里显式指定系统模块。
+                #if canImport(Glibc)
+                let result = Glibc.bind(fd, socketAddress, length)
+                #else
+                let result = Darwin.bind(fd, socketAddress, length)
+                #endif
+                return result == 0 && listen(fd, 1) == 0 && getsockname(fd, socketAddress, &length) == 0
+            }
         }
         XCTAssertTrue(bound)
         let port = Int(UInt16(bigEndian: address.sin_port))
