@@ -49,7 +49,19 @@ enum WearService {
         return record
     }
 
-    /// 将一套已收藏的 `Outfit` 设为「今天穿这套」。
+    /// 穿收藏前的检查：每件单品都在衣橱中，且上装、下装、鞋子齐全（审计 H-03）。
+    /// 返回给用户的提示；可以穿时返回 nil。规则在共享核心 `ItemLifecycle.checkWear` 中。
+    static func wearProblem(for outfit: Outfit) -> String? {
+        ItemLifecycle.checkWear(
+            outfit.items.map {
+                ItemLifecycle.WearCandidate(
+                    title: ItemDefaults.displayTitle(name: $0.name, category: $0.category), category: $0.category, status: $0.status)
+            },
+            requireComplete: true
+        ).message
+    }
+
+    /// 将一套已收藏的 `Outfit` 设为「今天穿这套」。调用前先用 `wearProblem(for:)` 检查。
     @discardableResult
     static func wearOutfit(_ outfit: Outfit, in context: ModelContext) -> WearRecord {
         deactivateActiveRecords(in: context)
@@ -76,22 +88,24 @@ enum WearService {
 
     // MARK: - 脱下流转
 
-    /// 脱下当前穿搭并流转：勾选的单品进洗衣袋，未勾选的回到衣橱。
+    /// 脱下当前穿搭并流转：勾选的单品进洗衣袋，未勾选的留在衣橱。
+    /// 只处理当前在衣橱中的单品，在洗衣袋或行李箱中的单品保持不变（审计 H-03），规则在共享核心 `ItemLifecycle.takeOff` 中。
     /// 记录本身保留为当天的日历历史（`isActive` 置为 false）。
     static func takeOff(
         _ record: WearRecord,
         laundryItems: Set<ClothingItem>,
         in context: ModelContext
     ) {
-        for item in record.items {
-            if laundryItems.contains(item) {
-                item.status = .inLaundry
-                item.laundryEntryDate = .now   // 记录入袋时间，用于滞留预警
-            } else {
-                item.status = .inWardrobe
-                item.laundryEntryDate = nil
-            }
-            item.updatedAt = .now
+        let now = Date.now
+        for item in record.items where item.status == .inWardrobe {
+            let next = ItemLifecycle.takeOff(
+                ItemLifecycle.State(status: item.status, laundryEntryDate: item.laundryEntryDate),
+                sentToLaundry: laundryItems.contains(item),
+                now: now   // 进洗衣袋时记录入袋时间，用于滞留预警
+            )
+            item.status = next.status
+            item.laundryEntryDate = next.laundryEntryDate
+            item.updatedAt = now
         }
         record.isActive = false
     }

@@ -6,8 +6,50 @@ final class ItemLifecycleTests: XCTestCase {
     let old = Date(timeIntervalSince1970: 1_700_000_000)
 
     func testTakeOff() {
-        XCTAssertEqual(ItemLifecycle.takeOff(sentToLaundry: true, now: now), .init(status: .inLaundry, laundryEntryDate: now))
-        XCTAssertEqual(ItemLifecycle.takeOff(sentToLaundry: false, now: now), .init(status: .inWardrobe, laundryEntryDate: nil))
+        let worn = ItemLifecycle.State(status: .inWardrobe, laundryEntryDate: nil)
+        XCTAssertEqual(ItemLifecycle.takeOff(worn, sentToLaundry: true, now: now), .init(status: .inLaundry, laundryEntryDate: now))
+        XCTAssertEqual(ItemLifecycle.takeOff(worn, sentToLaundry: false, now: now), .init(status: .inWardrobe, laundryEntryDate: nil))
+    }
+
+    /// 审计 H-03：不在衣橱中的单品脱下时状态与入袋时间都不变。
+    func testTakeOffLeavesItemsOutsideTheWardrobeUnchanged() {
+        let luggage = ItemLifecycle.State(status: .inLuggage, laundryEntryDate: old)
+        let laundry = ItemLifecycle.State(status: .inLaundry, laundryEntryDate: old)
+        for sent in [true, false] {
+            XCTAssertEqual(ItemLifecycle.takeOff(luggage, sentToLaundry: sent, now: now), luggage)
+            XCTAssertEqual(ItemLifecycle.takeOff(laundry, sentToLaundry: sent, now: now), laundry)
+        }
+    }
+
+    func testCheckWearAllowsCompleteWardrobeOutfit() {
+        let items = [ItemLifecycle.WearCandidate(title: "上装", category: .top, status: .inWardrobe),
+                     ItemLifecycle.WearCandidate(title: "下装", category: .bottom, status: .inWardrobe),
+                     ItemLifecycle.WearCandidate(title: "鞋子", category: .shoes, status: .inWardrobe)]
+        let check = ItemLifecycle.checkWear(items, requireComplete: true)
+        XCTAssertTrue(check.isAllowed)
+        XCTAssertNil(check.message)
+    }
+
+    func testCheckWearRejectsItemsOutsideTheWardrobe() {
+        let items = [ItemLifecycle.WearCandidate(title: "白色T恤", category: .top, status: .inLaundry),
+                     ItemLifecycle.WearCandidate(title: "牛仔裤", category: .bottom, status: .inWardrobe),
+                     ItemLifecycle.WearCandidate(title: "防水靴", category: .shoes, status: .inLuggage)]
+        let check = ItemLifecycle.checkWear(items, requireComplete: true)
+        XCTAssertFalse(check.isAllowed)
+        XCTAssertEqual(check.unavailable.map(\.title), ["白色T恤", "防水靴"])
+        XCTAssertEqual(check.missingRequired, [])
+        XCTAssertEqual(check.message, "这套穿搭中有单品不在衣橱：白色T恤在洗衣袋，防水靴在行李箱。请先放回衣橱再穿。")
+    }
+
+    func testCheckWearReportsMissingRequiredOnlyWhenAsked() {
+        let items = [ItemLifecycle.WearCandidate(title: "风衣", category: .outerwear, status: .inLuggage),
+                     ItemLifecycle.WearCandidate(title: "鞋子", category: .shoes, status: .inWardrobe)]
+        let complete = ItemLifecycle.checkWear(items, requireComplete: true)
+        XCTAssertEqual(complete.missingRequired, [.top, .bottom])
+        XCTAssertEqual(complete.message, "这套穿搭缺少：上装、下装。相关单品可能已被删除。这套穿搭中有单品不在衣橱：风衣在行李箱。请先放回衣橱再穿。")
+        let partial = ItemLifecycle.checkWear(items, requireComplete: false)
+        XCTAssertEqual(partial.missingRequired, [])
+        XCTAssertEqual(partial.message, "这套穿搭中有单品不在衣橱：风衣在行李箱。请先放回衣橱再穿。")
     }
 
     func testReturnFromLaundryClearsDate() {

@@ -41,6 +41,10 @@ final class WriteAPITests: XCTestCase {
         ((try object(response)["error"] as? [String: Any])?["code"] as? String) ?? ""
     }
 
+    static func errorMessage(_ response: TestResponse) throws -> String {
+        ((try object(response)["error"] as? [String: Any])?["message"] as? String) ?? ""
+    }
+
     func testEditItem() async throws {
         try await app().test(.router) { client in
             let update = """
@@ -77,6 +81,15 @@ final class WriteAPITests: XCTestCase {
 
     func testWearTakeOffAndLaundryFlow() async throws {
         try await app().test(.router) { client in
+            let rejected = try await client.execute(uri: "/api/v1/wear-records", method: .post, headers: Self.writeHeaders, body: Self.body("""
+                {"members":[{"itemId":"\(Self.tee)","slot":"top"},{"itemId":"\(Self.boots)","slot":"shoes"}]}
+                """))
+            XCTAssertEqual(rejected.status, .conflict, "the boots are in the luggage (audit H-03)")
+            XCTAssertEqual(try Self.errorMessage(rejected), "这套穿搭中有单品不在衣橱：防水靴在行李箱。请先放回衣橱再穿。")
+            let stillActive = try Self.object(try await client.execute(uri: "/api/v1/wear-records/active", method: .get))
+            XCTAssertEqual((stillActive["record"] as? [String: Any])?["id"] as? String, Self.activeRecord, "a rejected wear keeps the current record")
+            _ = try await client.execute(uri: "/api/v1/travel/unpack-all", method: .post, headers: Self.writeHeaders)
+
             let wear = try await client.execute(uri: "/api/v1/wear-records", method: .post, headers: Self.writeHeaders, body: Self.body("""
                 {"members":[{"itemId":"\(Self.tee)","slot":"top"},{"itemId":"\(Self.boots)","slot":"shoes"}]}
                 """))
@@ -98,7 +111,7 @@ final class WriteAPITests: XCTestCase {
             XCTAssertEqual(tee["status"] as? String, "inLaundry")
             XCTAssertEqual(tee["laundryRetentionWarning"] as? Bool, false, "just entered the laundry")
             let boots = try Self.object(try await client.execute(uri: "/api/v1/items/\(Self.boots)", method: .get))
-            XCTAssertEqual(boots["status"] as? String, "inWardrobe", "unchecked items return to the wardrobe")
+            XCTAssertEqual(boots["status"] as? String, "inWardrobe", "unchecked wardrobe items stay in the wardrobe")
 
             let again = try await client.execute(uri: "/api/v1/wear-records/\(recordID)/take-off", method: .post, headers: Self.writeHeaders,
                                                  body: Self.body(#"{"laundryItemIds":[]}"#))
@@ -123,6 +136,7 @@ final class WriteAPITests: XCTestCase {
     }
 
     func testOutfitsSuggestionsAndFavorites() async throws {
+        let store = try XCTUnwrap(store)
         try await app().test(.router) { client in
             let suggestions = try Self.object(try await client.execute(uri: "/api/v1/outfit-suggestions?warmth=mild&scenario=casual", method: .get))
             XCTAssertEqual(suggestions["missingRequired"] as? [String], ["bottom", "shoes"],
@@ -140,6 +154,10 @@ final class WriteAPITests: XCTestCase {
             XCTAssertEqual(outfit["source"] as? String, "manual")
             XCTAssertEqual((outfit["members"] as? [[String: Any]])?.map { $0["slot"] as? String }, ["top", "bottom", "shoes"])
 
+            let unavailable = try await client.execute(uri: "/api/v1/outfits/\(Self.outfit)/wear", method: .post, headers: Self.writeHeaders)
+            XCTAssertEqual(unavailable.status, .conflict, "the favorite has the jeans in the laundry and the boots in the luggage (audit H-03)")
+            XCTAssertEqual(try Self.errorMessage(unavailable), "这套穿搭中有单品不在衣橱：下装在洗衣袋，防水靴在行李箱。请先放回衣橱再穿。")
+            try await store.transaction { s in _ = try s.db.run("UPDATE items SET status = 'inWardrobe', laundry_entry_at = NULL;") }
             let worn = try await client.execute(uri: "/api/v1/outfits/\(Self.outfit)/wear", method: .post, headers: Self.writeHeaders)
             XCTAssertEqual(try Self.object(worn)["outfitId"] as? String, Self.outfit)
 

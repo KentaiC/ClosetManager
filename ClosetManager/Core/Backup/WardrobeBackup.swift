@@ -15,6 +15,24 @@ public enum WardrobeBackup {
     /// 当前写出的格式版本。
     public static let currentVersion = 1
 
+    /// 备份文件的格式版本不受支持。
+    public struct UnsupportedVersion: LocalizedError, Equatable {
+        public var version: Int
+
+        public init(version: Int) {
+            self.version = version
+        }
+
+        public var errorDescription: String? {
+            "备份文件版本为 \(version)，当前只支持版本 \(WardrobeBackup.currentVersion)。请更新到能读取该版本的 App。"
+        }
+    }
+
+    /// 导入前校验格式版本（修复审计 C-01 中「版本字段只写不查」）。较新的文件会被明确拒绝，而不是按旧格式解码。
+    public static func checkVersion(_ bundle: Bundle) throws {
+        guard bundle.version == currentVersion else { throw UnsupportedVersion(version: bundle.version) }
+    }
+
     public struct Bundle: Codable, Sendable {
         public var version = 1
         public var items: [ItemDTO]

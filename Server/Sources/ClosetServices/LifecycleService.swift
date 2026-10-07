@@ -13,12 +13,18 @@ public struct LifecycleService: Sendable {
     }
 
     /// 今天穿这套：先把其它正在穿的记录转为历史，再新建一条正在穿的记录（`wearToday` / `wearOutfit`）。
-    /// 与 App 相同，穿着不改变单品状态。
-    public func wear(members: [SlottedItemID], outfitID: UUID? = nil) async throws -> StoredWearRecord {
+    /// 与 App 相同，穿着不改变单品状态。每件单品都必须在衣橱中（审计 H-03）。
+    /// - Parameter requireComplete: 穿已保存的穿搭时还要求上装、下装、鞋子齐全。
+    public func wear(members: [SlottedItemID], outfitID: UUID? = nil, requireComplete: Bool = false) async throws -> StoredWearRecord {
         guard !members.isEmpty else { throw ServiceError.invalid("穿搭中没有单品。") }
         let timestamp = now()
         return try await store.transaction { session in
-            try Self.requireItems(session, members.map(\.itemID))
+            let byID = Dictionary(uniqueKeysWithValues: try Self.requireItems(session, members.map(\.itemID)).map { ($0.id, $0) })
+            let items = members.compactMap { byID[$0.itemID] }
+            let check = ItemLifecycle.checkWear(
+                items.map { ItemLifecycle.WearCandidate(title: ItemDefaults.displayTitle(name: $0.name, category: $0.category), category: $0.category, status: $0.status) },
+                requireComplete: requireComplete)
+            if let message = check.message { throw ServiceError.conflict(message) }
             if let outfitID, try session.outfits(ids: [outfitID]).isEmpty { throw ServiceError.notFound("未找到该穿搭。") }
             try session.deactivateWearRecords()
             let record = StoredWearRecord(id: UUID(), date: timestamp, isActive: true, outfitID: outfitID,
@@ -33,10 +39,10 @@ public struct LifecycleService: Sendable {
         guard let outfit = try await store.read({ try $0.outfits(ids: [id]).first }) else {
             throw ServiceError.notFound("未找到该穿搭。")
         }
-        return try await wear(members: outfit.members, outfitID: id)
+        return try await wear(members: outfit.members, outfitID: id, requireComplete: true)
     }
 
-    /// 脱下：勾选的单品进洗衣袋，其余回衣橱，记录转为历史（`WearService.takeOff`）。
+    /// 脱下：在衣橱中的单品按勾选进洗衣袋或留在衣橱，其它状态的单品保持不变（审计 H-03），记录转为历史（`WearService.takeOff`）。
     public func takeOff(recordID: UUID, laundryItemIDs: Set<UUID>) async throws -> StoredWearRecord {
         let timestamp = now()
         return try await store.transaction { session in
@@ -46,8 +52,9 @@ public struct LifecycleService: Sendable {
             guard record.isActive else { throw ServiceError.conflict("这条记录已经不是正在穿的穿搭。") }
             let memberIDs = Set(record.itemIDs)
             guard laundryItemIDs.isSubset(of: memberIDs) else { throw ServiceError.invalid("要放进洗衣袋的单品不在这套穿搭中。") }
-            for item in try session.items(ItemFilter(ids: record.itemIDs)) {
-                let state = ItemLifecycle.takeOff(sentToLaundry: laundryItemIDs.contains(item.id), now: timestamp)
+            for item in try session.items(ItemFilter(ids: record.itemIDs)) where item.status == .inWardrobe {
+                let current = ItemLifecycle.State(status: item.status, laundryEntryDate: item.laundryEntryDate)
+                let state = ItemLifecycle.takeOff(current, sentToLaundry: laundryItemIDs.contains(item.id), now: timestamp)
                 try session.updateItemState(id: item.id, state: state, updatedAt: timestamp)
             }
             try session.setWearRecordActive(id: recordID, false)

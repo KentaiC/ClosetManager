@@ -87,6 +87,8 @@ enum BackupService {
         let data = try Data(contentsOf: url)
         let decoder = WardrobeBackup.makeDecoder()
         let bundle = try decoder.decode(Bundle.self, from: data)
+        // 在改动任何数据之前拒绝不支持的版本（审计 C-01）。
+        try WardrobeBackup.checkVersion(bundle)
         apply(bundle, mode: mode, in: context)
     }
 

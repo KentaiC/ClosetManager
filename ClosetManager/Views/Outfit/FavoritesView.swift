@@ -68,6 +68,11 @@ struct FavoritesView: View {
     }
 
     private func wear(_ outfit: Outfit) {
+        // 收藏中的单品可能已进洗衣袋、行李箱或被删除，穿着前先检查（审计 H-03）。
+        if let problem = WearService.wearProblem(for: outfit) {
+            showToast(problem)
+            return
+        }
         WearService.wearOutfit(outfit, in: modelContext)
         showToast("已设为今天穿这套")
     }

@@ -7,6 +7,19 @@ final class WardrobeBackupContractTests: XCTestCase {
         .deletingLastPathComponent().deletingLastPathComponent()
         .appendingPathComponent("Fixtures/wardrobe-v1-sample.wardrobe")
 
+    /// 审计 C-01：版本号不是当前版本的备份在写入前被拒绝。
+    func testCheckVersionRejectsOtherVersions() throws {
+        var bundle = WardrobeBackup.Bundle(items: [], outfits: [], wearRecords: [])
+        XCTAssertNoThrow(try WardrobeBackup.checkVersion(bundle))
+        for version in [0, 2] {
+            bundle.version = version
+            XCTAssertThrowsError(try WardrobeBackup.checkVersion(bundle)) { error in
+                XCTAssertEqual(error as? WardrobeBackup.UnsupportedVersion, WardrobeBackup.UnsupportedVersion(version: version))
+                XCTAssertEqual(error.localizedDescription, "备份文件版本为 \(version)，当前只支持版本 1。请更新到能读取该版本的 App。")
+            }
+        }
+    }
+
     func testFixtureDecodes() throws {
         let data = try Data(contentsOf: Self.fixtureURL)
         let bundle = try WardrobeBackup.makeDecoder().decode(WardrobeBackup.Bundle.self, from: data)
