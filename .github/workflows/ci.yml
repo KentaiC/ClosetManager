@@ -108,7 +108,9 @@ jobs:
       - name: Run Playwright
         working-directory: Web
         run: |
-          export CLOSET_SERVER_BIN="docker run --rm --init --network host -v $GITHUB_WORKSPACE:$GITHUB_WORKSPACE -w $GITHUB_WORKSPACE $SWIFT_IMAGE $GITHUB_WORKSPACE/.build/debug/closet-server"
+          # 服务端以 0700 权限创建数据目录 Web/e2e/.data。容器以运行器的用户身份运行服务端，
+          # 这样该目录归运行器所有，Playwright 扫描 e2e 目录时才能读取它。
+          export CLOSET_SERVER_BIN="docker run --rm --init --network host --user $(id -u):$(id -g) -v $GITHUB_WORKSPACE:$GITHUB_WORKSPACE -w $GITHUB_WORKSPACE $SWIFT_IMAGE $GITHUB_WORKSPACE/.build/debug/closet-server"
           npx playwright test
       - name: Stop server containers
         if: always()
