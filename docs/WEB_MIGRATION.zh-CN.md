@@ -2,7 +2,7 @@
 
 本文记录 Closet Manager 从 iOS 应用逐步改造为本地 Web 应用的决策、架构与进度。审计结论见上一轮的审计报告，本文只记录实施过程中的事实。
 
-2026-10-08 起，最终产品只有 macOS 本地 Web 应用。iOS App 是迁移参照，最终删除。产品方向与迁移路线见第 10 章。
+iOS App 的去留属于审计编号 D3，目前为 `Deferred — requires product decision`，迁移路线见第 10 章。
 
 ## 1. 目标形态
 
@@ -10,12 +10,12 @@
 Browser
   → Web UI          Web/，浏览器单页应用
   → Backend         Server/，本机 Swift 服务进程，只监听 127.0.0.1
-  → Business Logic  ClosetManager/Core，迁移期间 iOS App 也编译这份源码
+  → Business Logic  ClosetManager/Core，与 iOS App 共用同一份源码
   → Database        SQLite 文件
   → File Storage    本机数据目录中的图片与备份
 ```
 
-iOS App 不属于最终产品。在 Final iOS Removal 阶段之前，它作为迁移参照保持可编译，与 Web 版共用 `ClosetManager/Core` 中的业务规则；该阶段删除 App，见第 10 章。
+iOS App 保持可编译、可运行，与 Web 版共用 `ClosetManager/Core` 中的业务规则。当前不删除 iOS App，将来是否删除未决定，见第 10 章。
 
 ## 2. 决策记录
 
@@ -23,7 +23,7 @@ iOS App 不属于最终产品。在 Final iOS Removal 阶段之前，它作为�
 |---|---|---|---|
 | D1 | 服务端使用 Swift | 迁移要求写明不要无理由更换现有技术栈，并尽可能复用现有业务逻辑。现有逻辑全部是 Swift。抠图与相似检测依赖 Apple Vision，因此这两项能力只在 macOS 14 及以上提供；服务端其余部分在 Linux 上也能编译和测试 | 已采用，若需要在 Windows 或 Linux 上正式运行需重新评估 |
 | D2 | 只监听 127.0.0.1，不提供局域网访问 | 安全基线。局域网访问属于新增能力，需要另行决定 | 已采用 |
-| D3 | iOS App 在迁移期间保留作为参照，最终删除；不做同步 | 2026-10-08 产品方向确定为只保留 macOS 本地 Web 应用，`iOS App will be removed from the final product.` | 已采用，2026-10-08 修订。原决策为保留 iOS App，见第 10 章 |
+| D3 | iOS App 保留，共享逻辑只有一份源码 | 迁移要求不得删除现有功能，并保持现有功能可运行 | 已采用。将来是否删除 iOS App 未决定，不实现自动同步，见第 10 章 |
 | D4 | 保留原图，导入数据不改变含义 | 迁移要求不得改变现有数据含义 | 已采用；原图元数据如何处理仍待决定 |
 | D5 | 未勾选场景的单品如何处理 | Repository 中没有依据 | 待决定。当前行为已由测试 `testItemsWithoutScenariosAreExcluded_AuditH01` 固定 |
 | D6 | 启动方式 | 终端命令是任何形态都需要的最小形态 | 已实现终端命令 `scripts/closet`，见第七阶段；登录后自动运行、容器等其它形态待决定 |
@@ -44,7 +44,7 @@ Core 只允许依赖 Foundation。SwiftUI 桥接放在 App 内，例如 `ClosetM
 
 `ClosetManager/Imaging` 用同样的方式共享 App 中调用 Vision、CoreImage、ImageIO 的代码，即 `VisionService` 与 `DuplicationDetectorService`。SwiftPM 把它编译成 `ClosetImaging` 模块。文件整体包在 `#if canImport(Vision)` 中，Linux 上是空模块。其中的取色与相似分组规则属于纯计算，放在 Core 的 `ColorExtraction` 与 `SimilarityGrouping` 中。
 
-这种组织方式是迁移期间的安排。共享核心保留的理由是它对 Web 服务端有价值，不是为了支持 iOS。删除 iOS 时，`Core` 与 `Imaging` 要先迁出 `ClosetManager/` 目录，见第 10 章。
+共享核心对 Web 服务端有价值，这是它保留的理由。若将来决定删除 iOS App，`Core` 与 `Imaging` 要先迁出 `ClosetManager/` 目录。
 
 ## 4. Roadmap 调整
 
@@ -289,18 +289,19 @@ App 的全部页面都已可以在浏览器中使用：衣橱、单品详情与�
 
 ### 需要你决定的问题
 
-D1 到 D6 都已确认，技术选型与确认内容见 `docs/ARCHITECTURE_DECISION.zh-CN.md`。D3 确定为 `iOS App will be removed from the final product.`。D6 中启动入口的具体形态仍需决定，目前的入口是终端命令 `scripts/closet`。
+D1、D2、D4、D5、D6 已确认，技术选型与确认内容见 `docs/ARCHITECTURE_DECISION.zh-CN.md`。D3 为 `Deferred — requires product decision`。D6 中启动入口的具体形态仍需决定，目前的入口是终端命令 `scripts/closet`。
 
 ### 在 Mac 上需要完成的验证
 
-原清单的前三项已由 GitHub CI 完成。提交 `8b9fce6` 上，iOS 构建、Linux 与 macOS 的 Swift 测试、前端测试、端到端测试全部通过，macOS 上实际运行了 192 个测试。原第六项「把 Web 版导出的备份导入 App」因迁移改为单向而不再需要。仍需在 Mac 上完成的是以下两项。
+原清单的前三项已由 GitHub CI 完成。提交 `8b9fce6` 上，iOS 构建、Linux 与 macOS 的 Swift 测试、前端测试、端到端测试全部通过，macOS 上实际运行了 192 个测试。仍需在 Mac 上完成的是以下三项。
 
 1. 用 `scripts/closet` 启动，从 App 导出一份真实备份并导入，核对单品数量、图片与穿着记录。
 2. 用几张真实衣物照片走一遍单件录入与批量录入，确认抠图、取色、HEIC 显示与缩略图正常；运行一次相似检测。Vision runtime on macOS is still not covered by automated tests.
+3. 把 Web 版导出的备份导入 App，确认 App 能读取。是否需要这一项取决于 D3。
 
 ### 行为修复轨道
 
-以下问题在迁移中保持了 App 的现状，并由特征测试固定，修复时测试会显式改变断言。修复放在 Core 中，以 Web 版的行为为准。App 在删除前仍编译同一份 Core，只要求它能通过构建，不再为 App 单独验证行为：H-01 的提示文字、H-02、M-01、M-04、M-07、M-10、M-16、M-17，以及看板中并列项顺序不固定的问题。H-03 已修复，见第 9 章。
+以下问题在迁移中保持了 App 的现状，并由特征测试固定，修复时测试会显式改变断言。修复放在共享核心中，App 与 Web 版同时生效：H-01 的提示文字、H-02、M-01、M-04、M-07、M-10、M-16、M-17，以及看板中并列项顺序不固定的问题。H-03 已修复，见第 9 章。
 
 ### 推送状态
 
@@ -340,23 +341,19 @@ C-02 与 P0-6 已在迁移中完成，见第六阶段。
 
 Swift 测试 192 个全部通过，新增测试覆盖共享规则、服务层与 HTTP 层。前端单元测试 109 个、端到端测试 21 个全部通过。替代验证环境中，App 形态的等价性检查全部通过，并新增了收藏穿着检查与 App 导入拒绝未知版本的检查。
 
-GitHub CI 的 iOS App 构建在提交 `4c0ed0e` 上已经成功，`FavoritesView` 与 `WearService` 的改动能通过编译。原计划在 App 中手动核对收藏穿着的提示，因产品方向调整不再需要，见第 10 章。
+GitHub CI 的 iOS App 构建在提交 `4c0ed0e` 上已经成功，`FavoritesView` 与 `WearService` 的改动能通过编译。在 Mac 上还需要确认一点。在 App 中穿一套含有洗衣袋单品的收藏，确认出现提示并且没有新建穿着记录。
 
-## 10. 产品方向调整与迁移路线
+## 10. D3 状态与迁移路线
 
-2026-10-08 起，最终产品只有 macOS 本地 Web 应用。D3 确定为 `iOS App will be removed from the final product.`。产品方向与技术选型见 `docs/ARCHITECTURE_DECISION.zh-CN.md` 第 1 章。
+### 10.1 D3
 
-### 10.1 产品方向
+D3 为 `Deferred — requires product decision`。
 
-Web 应用是最终产品。iOS App 是迁移参照，属于临时遗留代码，最终删除。
+当前不删除 iOS App，也没有删除它的计划，将来是否删除保持未决定。不实现 iOS 与 Web 之间的自动同步。
 
-不实现 iOS 与 Web 之间的同步。不为 iOS 的分发或维护做任何工作，包括 App Store、TestFlight 与设备部署。
+2026-10-08 曾把 D3 记为删除 iOS App，并规划了删除阶段。该记录已撤回，本章取代它。
 
-不购买 Apple Developer Program 不影响最终的 Web 产品。它在本机构建、在本机运行，只监听 `127.0.0.1`，最终用户运行时不需要 Xcode。
-
-共享核心保留的原因是它对 Web 服务端有价值。不为保留 iOS 增加任何抽象。
-
-在 Final iOS Removal 阶段之前，iOS 源码一律不删除。Web 迁移仍在使用其中的业务逻辑、图片处理与备份格式，App 本身也是核对行为与迁出数据的依据。
+不购买 Apple Developer Program 不影响 Web 应用。它在本机构建、在本机运行，只监听 `127.0.0.1`，运行时不需要 Xcode。
 
 ### 10.2 Migration Roadmap
 
@@ -365,54 +362,11 @@ Web 应用是最终产品。iOS App 是迁移参照，属于临时遗留代码�
 | W1 业务逻辑 | `ClosetManager/Core` 由服务端编译使用 | 已完成 |
 | W2 数据模型 | SQLite 显式 schema、迁移 1 与 2、`ClosetStorage` | 已完成 |
 | W3 图片处理 | `AppleImageProcessor` 调用 `ClosetImaging`，另有缩略图与 HEIC 显示转换 | 代码已完成，并在 macOS CI 中编译通过。Vision runtime on macOS is still not covered by automated tests. 尚未用真实照片验证 |
-| W4 备份导入迁移 | 服务端导入版本 1 的 `.wardrobe`，导入前预检并自动备份当前数据 | 导入功能已完成。真实数据尚未从 iPhone 导出并导入核对。C-01 中 Web 端的长期方案待决定 |
+| W4 备份导入迁移 | 服务端导入版本 1 的 `.wardrobe`，导入前预检并自动备份当前数据 | 导入功能已完成。真实数据尚未从 iPhone 导出并导入核对。C-01 的长期方案待决定 |
 | W5 功能对等 | App 的全部页面已能在浏览器中使用，有意差异见第 4 章 R4 | 是否达到可接受状态，需要你在使用后确认 |
 | W6 Web 测试 | Swift 测试 192 个、前端单元测试 109 个、端到端测试 21 个，GitHub CI 全部通过 | 已完成。Vision 运行时的缺口记在 W3 |
-| D6 启动入口 | 在 Finder 中启动、登录后自动运行等形态 | 待决定，不是删除阶段的前提 |
-| Final iOS Removal | 删除 iOS 部分，见 10.3 | 未开始 |
+| D6 启动入口 | 在 Finder 中启动、登录后自动运行等形态 | 待决定 |
 
-### 10.3 Final iOS Removal
+### 10.3 CI
 
-进入这一阶段需要同时满足以下条件。
-
-1. Web 业务逻辑完成，对应 W1。
-2. Web 数据模型完成，对应 W2。
-3. Web 图片处理完成，对应 W3，其中包括 Vision 在 macOS 上的实际运行验证。
-4. 备份导入迁移完成，对应 W4，其中包括把 iPhone 上的真实数据导出、导入并核对。删除之后不再有从 iPhone 导出数据的途径。
-5. Web 功能对等达到你确认的可接受状态，对应 W5。
-6. Web 测试完成，对应 W6。
-
-满足后按以下顺序执行，每一步单独提交并确认 CI 通过。
-
-第一步迁出共享代码。`ClosetManager/Core` 与 `ClosetManager/Imaging` 被服务端依赖，要先迁到服务端的目录结构中，更新 `Package.swift` 中的路径，并移除 `platforms` 中的 `.iOS(.v17)`。迁出后运行全部 Swift 测试与端到端测试，确认服务端不受影响。`ClosetCore` 与 `ClosetImaging` 目前使用 Swift 5 语言模式，原因是与 App 的 `SWIFT_VERSION = 5.0` 保持一致，删除后是否调整另行决定。
-
-第二步删除 iOS 部分。
-
-| 类别 | 删除对象 |
-|---|---|
-| iOS UI | `ClosetManager/App`、`ClosetManager/Views`、`ClosetManager/ViewModels`、`ClosetManager/Assets.xcassets` |
-| iOS 专用源码 | `ClosetManager/Models`、`ClosetManager/Services`、`ClosetManager/Support`，即 `ClosetManager/` 中除已迁出的 `Core` 与 `Imaging` 以外的全部内容 |
-| iOS 测试 | 仓库中没有 iOS 测试目标，`ClosetManager.xcodeproj` 只有一个 application 类型的目标。这一项只需确认没有遗留 |
-| iOS CI | `.github/workflows/ci.yml` 中的 `ios-app` 任务 |
-| Xcode 工程与目标 | `ClosetManager.xcodeproj` |
-| iOS 部署配置 | 位于 `ClosetManager.xcodeproj` 中，包括 `IPHONEOS_DEPLOYMENT_TARGET`、`DEVELOPMENT_TEAM`、`CODE_SIGN_STYLE` 与 `GENERATE_INFOPLIST_FILE`。仓库中没有单独的 Info.plist 或 entitlements 文件 |
-
-第三步更新文档。`README.md`、`README.zh-CN.md` 与 `docs/DEVELOPMENT.zh-CN.md` 目前描述的是 iOS App，要改为只描述 Web 应用。
-
-### 10.4 CI 方向
-
-iOS 构建任务 `ios-app` 不再是 Web 迁移的长期目标。它暂时保留，作为迁移期间的安全网，用来确认 Core 的修改没有破坏仍在编译 Core 的 App。它在 Final iOS Removal 阶段与 iOS 源码一起删除，现在不删除。
-
-macOS 上的 Swift 测试、前端测试与端到端测试是长期保留的任务。Linux 上的 Swift 测试与端到端任务目前在 Linux 上运行，D1 不要求 Linux 作为运行平台，这两项是否改到 macOS 上运行另行决定。
-
-### 10.5 已有记录的重新归类
-
-| 编号或位置 | 原记录 | 现在 |
-|---|---|---|
-| 第 2 章 D3 | iOS App 保留 | 迁移期间保留作为参照，最终删除，不做同步 |
-| H-04、H-05、H-06、P0-5 | 第 9 章暂缓 | 只涉及 iOS 内部，不再修复，随 iOS 删除而不再存在 |
-| P0-4 | 第 9 章暂缓 | iOS 部分不再进行。Web 端缩略图已在第五阶段完成 |
-| C-01 与 P0-3 | 第 9 章暂缓 | App 端的 `ModelActor` 重构不再进行。Web 端的流式导出导入与备份格式 v2 仍需架构决定 |
-| 第 4 章 R4 中 App 的行为 | Web 版的对照 | 删除前仍作为对照，删除后以 Web 版行为为准 |
-| 第 8 章 Mac 验证「把 Web 版导出的备份导入 App」 | 待验证 | 不再需要，迁移是单向的 |
-| 第 9 章「在 App 中穿一套含有洗衣袋单品的收藏」 | 待验证 | 不再需要 |
+CI 的全部任务继续保留，包括 iOS 构建任务 `ios-app`。它用来确认 Core 的修改没有破坏 iOS App 的构建。
