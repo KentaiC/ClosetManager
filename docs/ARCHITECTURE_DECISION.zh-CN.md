@@ -39,7 +39,7 @@ iOS App 的去留属于 D3，目前为 `Deferred — requires product decision`�
 | D3 | `Deferred — requires product decision` | 当前不删除 iOS App，没有删除计划，将来是否删除未决定。不实现 iOS 与 Web 的自动同步 |
 | D4 | 原图与原图元数据永久保留，原图不以 base64 整体存入数据库 | 数据库中只保存原图的 SHA-256 引用，上传内容按原字节写入文件，见第 3 章 |
 | D5 | 没有选择场景的单品不参与智能推荐，不能理解为适用所有场景 | 与当前行为一致，由 `testItemsWithoutScenariosAreExcluded_AuditH01` 固定 |
-| D6 | 启动后本地服务启动、只监听本机、自动打开浏览器进入应用，用户不需要手动输入地址 | 服务端与启动脚本已实现自动打开浏览器。启动入口的具体形态尚未确定，见第 3 章 |
+| D6 | 启动后本地服务启动、只监听本机、自动打开浏览器进入应用，用户不需要手动输入地址 | 最小启动流程已实现，入口是终端命令 `scripts/closet`。浏览器在服务开始监听之后才打开，判断依据是 Hummingbird 的 `onServerRunning` 回调。2026-10-08 用 `scripts/closet start` 验证：浏览器命令被调用时 `/api/v1/health` 已返回 200；端口被占用或数据目录无效时以退出码 1 结束，不打开浏览器；没有可用的浏览器命令时服务继续运行并提示手动访问已打印的地址 |
 
 ## 3. 最终选择
 
@@ -55,7 +55,7 @@ iOS App 的去留属于 D3，目前为 `Deferred — requires product decision`�
 | 图片处理 | 服务端直接编译现有的 `VisionService` 与 `DuplicationDetectorService`，通过 `ImageProcessor` 协议由 `AppleImageProcessor` 调用 | `ClosetManager/Imaging` 编译为 `ClosetImaging` 模块，使用 `VNGenerateForegroundInstanceMaskRequest`、`VNGenerateImageFeaturePrintRequest`、CoreImage 与 ImageIO |
 | 本机访问策略 | 只绑定 `127.0.0.1`。端口默认 8765，被占用时依次尝试之后的 9 个端口。请求的 Host 必须是本机，写请求必须带 `X-Closet-Client` 头并且同源 | `LocalLaunch.swift` 中的 `PortSelector`，`Middleware.swift:7-65` 中的 `RequestGuardMiddleware`，`Tests/ClosetHTTPTests/SecurityTests.swift` |
 | 浏览器启动 | 服务启动成功后用 `/usr/bin/open` 打开默认浏览器 | `closet-server serve --open`，`LocalLaunch.swift:90-107` 中的 `BrowserOpener`。`scripts/closet` 启动时总是传入 `--open` |
-| 启动入口形态 | Repository 中没有足够信息确认这一点。 | 目前的入口是终端命令 `scripts/closet`。D6 要求用户启动应用，但没有指定在 Finder 中双击、登录后自动运行或其它形式，需要你决定 |
+| 启动入口形态 | 终端命令 `scripts/closet` | `scripts/closet start` 依次构建前端与服务端，然后以 `exec` 运行 `closet-server serve --web-root Web/dist --open`，不留下后台进程。Finder 双击、登录后自动运行、`.app` 等形态不在本次范围内 |
 | 运行时需求 | 运行时只需要 `closet-server` 可执行文件与 `Web/dist`，不需要 Xcode | 构建时 `scripts/closet` 需要 Swift 工具链，提示文字为「在 macOS 上安装 Xcode 或命令行工具即可」，构建前端需要 Node.js 22。CI 的 macOS 任务使用 Xcode 构建。只安装命令行工具能否完成构建，Repository 中没有足够信息确认这一点 |
 
 ## 4. Swift、TypeScript 与 Python 的比较
